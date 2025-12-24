@@ -20,6 +20,8 @@ import DiscountsList from "./pages/dashboard/discounts/DiscountsList";
 import StoreSettings from "./pages/dashboard/settings/StoreSettings";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
+import AdminStores from "./pages/admin/AdminStores";
+import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +55,8 @@ const App = () => (
               {/* Super Admin Dashboard */}
               <Route path="/admin" element={<SuperAdminLayout />}>
                 <Route index element={<AdminOverview />} />
+                <Route path="stores" element={<AdminStores />} />
+                <Route path="users" element={<AdminUsers />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
