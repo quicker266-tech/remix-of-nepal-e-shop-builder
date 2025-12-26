@@ -15,8 +15,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import ProductVariantsSection from '@/components/products/ProductVariantsSection';
+import QuickCategoryModal from '@/components/products/QuickCategoryModal';
 
 type Category = Tables<'categories'>;
+
+interface CategoryAttribute {
+  name: string;
+  type: 'text' | 'select';
+  options?: string[];
+  required?: boolean;
+}
 
 const productSchema = z.object({
   name: z.string().min(2, 'Product name must be at least 2 characters').max(100),
@@ -48,6 +57,8 @@ export default function ProductForm() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [savedProductId, setSavedProductId] = useState<string | undefined>(id);
+  const [categoryAttributes, setCategoryAttributes] = useState<CategoryAttribute[]>([]);
 
   const isEditing = !!id;
 
@@ -77,9 +88,25 @@ export default function ProductForm() {
       fetchCategories();
       if (id) {
         fetchProduct();
+        setSavedProductId(id);
       }
     }
   }, [currentStore, id]);
+
+  // Update category attributes when category changes
+  useEffect(() => {
+    const categoryId = form.watch('category_id');
+    if (categoryId && categories.length > 0) {
+      const category = categories.find(c => c.id === categoryId);
+      if (category?.attribute_template && Array.isArray(category.attribute_template)) {
+        setCategoryAttributes(category.attribute_template as unknown as CategoryAttribute[]);
+      } else {
+        setCategoryAttributes([]);
+      }
+    } else {
+      setCategoryAttributes([]);
+    }
+  }, [form.watch('category_id'), categories]);
 
   const fetchCategories = async () => {
     if (!currentStore) return;
@@ -498,6 +525,14 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Product Variants Section */}
+              <ProductVariantsSection
+                productId={savedProductId}
+                categoryId={form.watch('category_id')}
+                categoryAttributes={categoryAttributes}
+                basePrice={form.watch('price')}
+              />
+
               <Card>
                 <CardHeader>
                   <CardTitle>SEO</CardTitle>
@@ -605,7 +640,16 @@ export default function ProductForm() {
                     name="category_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Category</FormLabel>
+                          <QuickCategoryModal
+                            storeId={currentStore.id}
+                            onCategoryCreated={(categoryId, categoryName) => {
+                              fetchCategories();
+                              field.onChange(categoryId);
+                            }}
+                          />
+                        </div>
                         <Select 
                           onValueChange={field.onChange} 
                           value={field.value || undefined}
