@@ -18,6 +18,8 @@ import OrderDetails from "./pages/dashboard/orders/OrderDetails";
 import CustomersList from "./pages/dashboard/customers/CustomersList";
 import DiscountsList from "./pages/dashboard/discounts/DiscountsList";
 import StoreSettings from "./pages/dashboard/settings/StoreSettings";
+import CategoriesList from "./pages/dashboard/categories/CategoriesList";
+import ProfilePage from "./pages/dashboard/profile/ProfilePage";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminStores from "./pages/admin/AdminStores";
@@ -42,6 +44,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardHome />} />
                 <Route path="create-store" element={<CreateStore />} />
+                <Route path="categories" element={<CategoriesList />} />
                 <Route path="products" element={<ProductsList />} />
                 <Route path="products/new" element={<ProductForm />} />
                 <Route path="products/:id/edit" element={<ProductForm />} />
@@ -50,6 +53,7 @@ const App = () => (
                 <Route path="customers" element={<CustomersList />} />
                 <Route path="discounts" element={<DiscountsList />} />
                 <Route path="settings" element={<StoreSettings />} />
+                <Route path="profile" element={<ProfilePage />} />
               </Route>
               
               {/* Super Admin Dashboard */}
