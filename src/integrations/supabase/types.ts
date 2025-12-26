@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       categories: {
         Row: {
+          attribute_template: Json | null
           created_at: string
           description: string | null
           id: string
@@ -28,6 +29,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attribute_template?: Json | null
           created_at?: string
           description?: string | null
           id?: string
@@ -40,6 +42,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attribute_template?: Json | null
           created_at?: string
           description?: string | null
           id?: string
