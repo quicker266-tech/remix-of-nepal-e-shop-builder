@@ -6,6 +6,23 @@
  * Configuration panel for editing section properties.
  * Dynamically renders form fields based on section type.
  * 
+ * ARCHITECTURE:
+ * - Main component renders header and scrollable content area
+ * - renderSectionFields() routes to type-specific field renderers
+ * - Each section type has its own field renderer component
+ * - GenericFields provides fallback for unsupported types
+ * 
+ * HOW TO ADD A NEW SECTION TYPE:
+ * 1. Create a new field renderer component (e.g., NewsletterFields)
+ * 2. Add case to renderSectionFields() switch statement
+ * 3. Define the config interface in types.ts
+ * 4. Optionally add type-specific validation
+ * 
+ * FIELD UPDATE PATTERN:
+ * - updateField(fieldName, value) updates a single config property
+ * - Changes are immediately sent to parent via onUpdate
+ * - Parent component handles persistence to database
+ * 
  * ============================================================================
  */
 
@@ -27,6 +44,13 @@ import { X, Image as ImageIcon, Link as LinkIcon, Type, Settings } from 'lucide-
 import { PageSection, SectionConfig, HeroBannerConfig, FeaturedProductsConfig, TextBlockConfig } from '../types';
 import { SECTION_DEFINITIONS } from '../constants';
 
+/**
+ * Props for the SectionEditor component
+ * 
+ * @property section - The section being edited
+ * @property onUpdate - Callback when config changes (receives full config object)
+ * @property onClose - Callback when close button is clicked
+ */
 interface SectionEditorProps {
   section: PageSection;
   onUpdate: (config: SectionConfig) => void;
@@ -34,16 +58,23 @@ interface SectionEditorProps {
 }
 
 export function SectionEditor({ section, onUpdate, onClose }: SectionEditorProps) {
+  // Get section definition for display info
   const definition = SECTION_DEFINITIONS[section.section_type];
   const config = section.config;
 
+  /**
+   * Update a single field in the config
+   * Merges with existing config and sends to parent
+   */
   const updateField = (field: string, value: any) => {
     onUpdate({ ...config, [field]: value });
   };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* ============================================================
+       * HEADER: Section name, type label, and close button
+       * ============================================================ */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-foreground">{section.name}</h3>
@@ -54,7 +85,9 @@ export function SectionEditor({ section, onUpdate, onClose }: SectionEditorProps
         </Button>
       </div>
 
-      {/* Content */}
+      {/* ============================================================
+       * CONTENT: Type-specific form fields
+       * ============================================================ */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           {/* Render fields based on section type */}
@@ -66,9 +99,17 @@ export function SectionEditor({ section, onUpdate, onClose }: SectionEditorProps
 }
 
 // ============================================================================
-// FIELD RENDERERS BY SECTION TYPE
+// FIELD ROUTER - Routes section types to appropriate field renderers
 // ============================================================================
 
+/**
+ * Routes section types to their specific field renderers
+ * 
+ * @param sectionType - The type of section being edited
+ * @param config - Current section configuration
+ * @param updateField - Function to update a config field
+ * @returns JSX for the appropriate field renderer
+ */
 function renderSectionFields(
   sectionType: string,
   config: SectionConfig,
@@ -77,12 +118,17 @@ function renderSectionFields(
   switch (sectionType) {
     case 'hero_banner':
       return <HeroBannerFields config={config as HeroBannerConfig} updateField={updateField} />;
+    
+    // Product grid sections share the same field renderer
     case 'featured_products':
     case 'new_arrivals':
     case 'best_sellers':
       return <ProductGridFields config={config as FeaturedProductsConfig} updateField={updateField} />;
+    
     case 'text_block':
       return <TextBlockFields config={config as TextBlockConfig} updateField={updateField} />;
+    
+    // Fallback for section types without dedicated editors
     default:
       return <GenericFields config={config} updateField={updateField} />;
   }
@@ -92,6 +138,15 @@ function renderSectionFields(
 // HERO BANNER FIELDS
 // ============================================================================
 
+/**
+ * Field renderer for hero_banner section type
+ * 
+ * Sections:
+ * - Content: Title, subtitle
+ * - Call to Action: Primary and secondary buttons
+ * - Background: Image URL and overlay opacity
+ * - Layout: Text alignment and height
+ */
 function HeroBannerFields({
   config,
   updateField,
@@ -101,7 +156,9 @@ function HeroBannerFields({
 }) {
   return (
     <>
-      {/* Content Section */}
+      {/* ============================================================
+       * CONTENT SECTION: Title and subtitle
+       * ============================================================ */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Type className="w-4 h-4" />
@@ -134,13 +191,16 @@ function HeroBannerFields({
 
       <Separator />
 
-      {/* CTA Section */}
+      {/* ============================================================
+       * CTA SECTION: Primary and secondary buttons
+       * ============================================================ */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <LinkIcon className="w-4 h-4" />
           Call to Action
         </div>
         
+        {/* Primary button */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="buttonText">Button Text</Label>
@@ -162,6 +222,7 @@ function HeroBannerFields({
           </div>
         </div>
 
+        {/* Secondary button (optional) */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="secondaryButtonText">Secondary Button</Label>
@@ -186,7 +247,9 @@ function HeroBannerFields({
 
       <Separator />
 
-      {/* Background Section */}
+      {/* ============================================================
+       * BACKGROUND SECTION: Image and overlay
+       * ============================================================ */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <ImageIcon className="w-4 h-4" />
@@ -203,6 +266,7 @@ function HeroBannerFields({
           />
         </div>
 
+        {/* Overlay opacity slider (0-100%) */}
         <div>
           <Label htmlFor="backgroundOverlay">Overlay Opacity ({config.backgroundOverlay || 0}%)</Label>
           <input
@@ -219,7 +283,9 @@ function HeroBannerFields({
 
       <Separator />
 
-      {/* Layout Section */}
+      {/* ============================================================
+       * LAYOUT SECTION: Text alignment and height
+       * ============================================================ */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Settings className="w-4 h-4" />
@@ -268,8 +334,16 @@ function HeroBannerFields({
 
 // ============================================================================
 // PRODUCT GRID FIELDS
+// Shared by: featured_products, new_arrivals, best_sellers
 // ============================================================================
 
+/**
+ * Field renderer for product grid section types
+ * 
+ * Sections:
+ * - Title and subtitle for the section header
+ * - Display options: product count, columns, show price, show add to cart
+ */
 function ProductGridFields({
   config,
   updateField,
@@ -279,6 +353,7 @@ function ProductGridFields({
 }) {
   return (
     <>
+      {/* Section header content */}
       <div className="space-y-4">
         <div>
           <Label htmlFor="title">Section Title</Label>
@@ -303,6 +378,7 @@ function ProductGridFields({
 
       <Separator />
 
+      {/* Display configuration */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Settings className="w-4 h-4" />
@@ -310,6 +386,7 @@ function ProductGridFields({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
+          {/* Number of products to display */}
           <div>
             <Label>Products to Show</Label>
             <Select
@@ -327,6 +404,8 @@ function ProductGridFields({
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Grid columns */}
           <div>
             <Label>Columns</Label>
             <Select
@@ -346,6 +425,7 @@ function ProductGridFields({
           </div>
         </div>
 
+        {/* Toggle switches for visibility options */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label htmlFor="showPrice">Show Prices</Label>
@@ -373,6 +453,14 @@ function ProductGridFields({
 // TEXT BLOCK FIELDS
 // ============================================================================
 
+/**
+ * Field renderer for text_block section type
+ * 
+ * Features:
+ * - Rich text content (supports basic HTML)
+ * - Text alignment (left/center/right)
+ * - Max width control
+ */
 function TextBlockFields({
   config,
   updateField,
@@ -382,6 +470,7 @@ function TextBlockFields({
 }) {
   return (
     <>
+      {/* Content textarea */}
       <div className="space-y-4">
         <div>
           <Label htmlFor="content">Content</Label>
@@ -400,6 +489,7 @@ function TextBlockFields({
 
       <Separator />
 
+      {/* Layout options */}
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -442,9 +532,18 @@ function TextBlockFields({
 }
 
 // ============================================================================
-// GENERIC FIELDS (fallback for unsupported section types)
+// GENERIC FIELDS (Fallback for unsupported section types)
 // ============================================================================
 
+/**
+ * Fallback field renderer for section types without dedicated editors
+ * Automatically generates inputs based on config structure
+ * 
+ * Supported types:
+ * - string: Text input
+ * - number: Number input
+ * - boolean: Switch toggle
+ */
 function GenericFields({
   config,
   updateField,
@@ -454,6 +553,7 @@ function GenericFields({
 }) {
   const entries = Object.entries(config as Record<string, unknown>);
 
+  // Empty state when no config properties exist
   if (entries.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -465,6 +565,7 @@ function GenericFields({
   return (
     <div className="space-y-4">
       {entries.map(([key, value]) => {
+        // String fields -> text input
         if (typeof value === 'string') {
           return (
             <div key={key}>
@@ -477,6 +578,7 @@ function GenericFields({
             </div>
           );
         }
+        // Number fields -> number input
         if (typeof value === 'number') {
           return (
             <div key={key}>
@@ -490,6 +592,7 @@ function GenericFields({
             </div>
           );
         }
+        // Boolean fields -> switch toggle
         if (typeof value === 'boolean') {
           return (
             <div key={key} className="flex items-center justify-between">
@@ -502,15 +605,22 @@ function GenericFields({
             </div>
           );
         }
+        // Skip complex types (objects, arrays)
         return null;
       })}
     </div>
   );
 }
 
+/**
+ * Format a camelCase or snake_case key into a readable label
+ * e.g., "backgroundImage" -> "Background Image"
+ * e.g., "show_price" -> "Show Price"
+ */
 function formatLabel(key: string): string {
   return key
+    .replace(/_/g, ' ')
     .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
+    .replace(/^./, str => str.toUpperCase())
     .trim();
 }

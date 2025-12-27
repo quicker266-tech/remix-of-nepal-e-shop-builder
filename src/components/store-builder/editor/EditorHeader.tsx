@@ -6,6 +6,16 @@
  * Top navigation bar for the store builder editor.
  * Contains: page title, preview mode toggles, zoom controls, publish button.
  * 
+ * ARCHITECTURE:
+ * - Left section: Navigation back + page info with publication status
+ * - Center section: Responsive preview mode switcher (desktop/tablet/mobile)
+ * - Right section: Zoom controls, preview link, and publish action
+ * 
+ * HOW TO EXTEND:
+ * - Add new preview modes: Update previewMode type and add button in center section
+ * - Add new actions: Add buttons to the right section
+ * - Customize header styling: Modify the header className
+ * 
  * ============================================================================
  */
 
@@ -32,6 +42,15 @@ import {
 import { Link } from 'react-router-dom';
 import { EditorState, StorePage } from '../types';
 
+/**
+ * Props for the EditorHeader component
+ * 
+ * @property store - Basic store info for display and linking
+ * @property activePage - Currently selected page (can be null if no page selected)
+ * @property editorState - Current editor state (preview mode, zoom level, etc.)
+ * @property setEditorState - Function to update editor state
+ * @property onPublish - Callback when publish/update button is clicked
+ */
 interface EditorHeaderProps {
   store: {
     id: string;
@@ -51,6 +70,12 @@ export function EditorHeader({
   setEditorState,
   onPublish,
 }: EditorHeaderProps) {
+  /**
+   * Handles zoom level changes
+   * Clamps zoom between 50% and 150% for usability
+   * 
+   * @param delta - Amount to change zoom (positive = zoom in, negative = zoom out)
+   */
   const handleZoom = (delta: number) => {
     const newZoom = Math.max(50, Math.min(150, editorState.zoom + delta));
     setEditorState({ ...editorState, zoom: newZoom });
@@ -58,20 +83,26 @@ export function EditorHeader({
 
   return (
     <header className="h-14 bg-background border-b border-border flex items-center justify-between px-4">
-      {/* Left: Back button and page info */}
+      {/* ============================================================
+       * LEFT SECTION: Back button and page info
+       * Shows store name, current page, and publication status
+       * ============================================================ */}
       <div className="flex items-center gap-4">
+        {/* Back to dashboard settings */}
         <Link to="/dashboard/settings">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
         
+        {/* Breadcrumb: Store name / Page title + status badge */}
         <div className="flex items-center gap-2">
           <span className="font-semibold text-foreground">{store.name}</span>
           <span className="text-muted-foreground">/</span>
           <span className="text-muted-foreground">
             {activePage?.title || 'No page selected'}
           </span>
+          {/* Publication status badge */}
           {activePage?.is_published ? (
             <Badge variant="secondary" className="ml-2 bg-success/10 text-success border-success/20">
               <Check className="w-3 h-3 mr-1" />
@@ -85,7 +116,10 @@ export function EditorHeader({
         </div>
       </div>
 
-      {/* Center: Preview mode toggles */}
+      {/* ============================================================
+       * CENTER SECTION: Preview mode toggles
+       * Switch between desktop, tablet, and mobile preview widths
+       * ============================================================ */}
       <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
         <Button
           variant={editorState.previewMode === 'desktop' ? 'secondary' : 'ghost'}
@@ -116,9 +150,12 @@ export function EditorHeader({
         </Button>
       </div>
 
-      {/* Right: Zoom and actions */}
+      {/* ============================================================
+       * RIGHT SECTION: Zoom controls and actions
+       * Zoom in/out, preview link, publish/update button
+       * ============================================================ */}
       <div className="flex items-center gap-2">
-        {/* Zoom controls */}
+        {/* Zoom controls: Zoom out / percentage display / Zoom in */}
         <div className="flex items-center gap-1 border rounded-lg px-1">
           <Button
             variant="ghost"
@@ -141,7 +178,7 @@ export function EditorHeader({
           </Button>
         </div>
 
-        {/* Preview button */}
+        {/* Preview button - opens live store in new tab */}
         <a
           href={`/store/${store.slug}`}
           target="_blank"
@@ -154,7 +191,7 @@ export function EditorHeader({
           </Button>
         </a>
 
-        {/* Publish button */}
+        {/* Publish/Update button - changes label based on publication status */}
         <Button onClick={onPublish} className="gap-2">
           {activePage?.is_published ? (
             <>
