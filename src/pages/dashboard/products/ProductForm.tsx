@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Loader2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import ProductVariantsSection from '@/components/products/ProductVariantsSection';
 import QuickCategoryModal from '@/components/products/QuickCategoryModal';
+import ImageUpload from '@/components/products/ImageUpload';
 
 type Category = Tables<'categories'>;
 
@@ -56,7 +57,6 @@ export default function ProductForm() {
   const [loading, setLoading] = useState(!!id);
   const [categories, setCategories] = useState<Category[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState('');
   const [savedProductId, setSavedProductId] = useState<string | undefined>(id);
   const [categoryAttributes, setCategoryAttributes] = useState<CategoryAttribute[]>([]);
 
@@ -185,16 +185,6 @@ export default function ProductForm() {
     }
   };
 
-  const addImageUrl = () => {
-    if (newImageUrl && !imageUrls.includes(newImageUrl)) {
-      setImageUrls([...imageUrls, newImageUrl]);
-      setNewImageUrl('');
-    }
-  };
-
-  const removeImageUrl = (url: string) => {
-    setImageUrls(imageUrls.filter(u => u !== url));
-  };
 
   const onSubmit = async (values: ProductFormValues) => {
     if (!currentStore) {
@@ -349,40 +339,15 @@ export default function ProductForm() {
               <Card>
                 <CardHeader>
                   <CardTitle>Images</CardTitle>
-                  <CardDescription>Add product images via URL</CardDescription>
+                  <CardDescription>Upload product images or add via URL</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="https://example.com/image.jpg"
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                    />
-                    <Button type="button" variant="outline" onClick={addImageUrl}>
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  {imageUrls.length > 0 && (
-                    <div className="grid grid-cols-4 gap-4">
-                      {imageUrls.map((url, index) => (
-                        <div key={index} className="relative group">
-                          <img 
-                            src={url} 
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg border"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImageUrl(url)}
-                            className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <CardContent>
+                  <ImageUpload
+                    images={imageUrls}
+                    onImagesChange={setImageUrls}
+                    storeId={currentStore.id}
+                    productSlug={form.watch('slug')}
+                  />
                 </CardContent>
               </Card>
 
