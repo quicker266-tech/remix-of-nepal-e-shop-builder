@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Store, LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, FolderTree } from 'lucide-react';
+import { Store, LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, FolderTree, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import StoreSwitcher from './StoreSwitcher';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: Palette, label: 'Store Builder', path: '/dashboard/store-builder' },
   { icon: FolderTree, label: 'Categories', path: '/dashboard/categories' },
   { icon: Package, label: 'Products', path: '/dashboard/products' },
   { icon: ShoppingCart, label: 'Orders', path: '/dashboard/orders' },

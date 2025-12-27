@@ -26,6 +26,7 @@ import AdminOverview from "./pages/admin/AdminOverview";
 import AdminStores from "./pages/admin/AdminStores";
 import AdminUsers from "./pages/admin/AdminUsers";
 import StoreCatalog from "./pages/storefront/StoreCatalog";
+import StoreBuilder from "./components/store-builder/StoreBuilder";
 import ProductDetail from "./pages/storefront/ProductDetail";
 import Cart from "./pages/storefront/Cart";
 import Checkout from "./pages/storefront/Checkout";
@@ -65,6 +66,7 @@ const App = () => (
                   <Route path="customers" element={<CustomersList />} />
                   <Route path="discounts" element={<DiscountsList />} />
                   <Route path="settings" element={<StoreSettings />} />
+                  <Route path="store-builder" element={<StoreBuilder />} />
                   <Route path="profile" element={<ProfilePage />} />
                 </Route>
                 
