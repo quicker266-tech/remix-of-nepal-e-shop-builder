@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased] - 2025-12-27
+
+### Documentation
+- Added comprehensive JSDoc comments to all Store Builder editor components:
+  - `EditorHeader.tsx` - Preview controls and publish actions
+  - `SectionPalette.tsx` - Section type selection with icon mapping
+  - `SectionList.tsx` - Drag-and-drop section management
+  - `SectionEditor.tsx` - Section configuration with field renderers
+  - `PageManager.tsx` - Page CRUD operations
+  - `ThemeEditor.tsx` - Theme customization (colors, fonts, layout)
+  - `PreviewFrame.tsx` - Live preview rendering
+- Added JSDoc comments to Context files:
+  - `AuthContext.tsx` - Authentication flow and role management
+  - `StoreContext.tsx` - Multi-tenant store selection
+  - `CartContext.tsx` - Shopping cart with localStorage persistence
+- Added JSDoc comments to key pages:
+  - `ProductForm.tsx` - Product create/edit with validation
+  - `StoreCatalog.tsx` - Customer-facing product catalog
+
 ---
 
 ## [Unreleased]

@@ -1,3 +1,34 @@
+/**
+ * ============================================================================
+ * PRODUCT FORM PAGE
+ * ============================================================================
+ * 
+ * Create and edit products for the store.
+ * Handles all product properties including images, pricing, inventory, and SEO.
+ * 
+ * ARCHITECTURE:
+ * - Uses react-hook-form with Zod validation
+ * - Fetches categories for organization
+ * - Supports product variants via ProductVariantsSection
+ * - Auto-generates URL slug from product name
+ * - Inherits category attributes for variant options
+ * 
+ * FORM SECTIONS:
+ * 1. Basic Information: Name, slug, description
+ * 2. Images: Upload via ImageUpload component
+ * 3. Pricing: Price, compare-at price, cost price
+ * 4. Inventory: SKU, barcode, stock quantity, tracking toggle
+ * 5. Variants: Via ProductVariantsSection component
+ * 6. SEO: Title and meta description
+ * 7. Sidebar: Status, featured toggle, category
+ * 
+ * USAGE:
+ * - New product: /dashboard/products/new
+ * - Edit product: /dashboard/products/:id
+ * 
+ * ============================================================================
+ */
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -21,6 +52,10 @@ import ImageUpload from '@/components/products/ImageUpload';
 
 type Category = Tables<'categories'>;
 
+/**
+ * Category attribute definition
+ * Used for product variants based on category settings
+ */
 interface CategoryAttribute {
   name: string;
   type: 'text' | 'select';
@@ -28,6 +63,10 @@ interface CategoryAttribute {
   required?: boolean;
 }
 
+/**
+ * Zod validation schema for product form
+ * Validates all product fields with appropriate constraints
+ */
 const productSchema = z.object({
   name: z.string().min(2, 'Product name must be at least 2 characters').max(100),
   slug: z.string().min(2, 'Slug must be at least 2 characters').max(100)
@@ -51,10 +90,12 @@ type ProductFormValues = z.infer<typeof productSchema>;
 
 export default function ProductForm() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams(); // Product ID from URL (undefined for new products)
   const { currentStore } = useStore();
+  
+  // Form and loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(!!id);
+  const [loading, setLoading] = useState(!!id); // Only show loading for edit mode
   const [categories, setCategories] = useState<Category[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [savedProductId, setSavedProductId] = useState<string | undefined>(id);
@@ -62,6 +103,7 @@ export default function ProductForm() {
 
   const isEditing = !!id;
 
+  // Initialize form with react-hook-form and Zod validation
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -83,6 +125,10 @@ export default function ProductForm() {
     },
   });
 
+  // ================================================================
+  // DATA FETCHING
+  // ================================================================
+
   useEffect(() => {
     if (currentStore) {
       fetchCategories();
@@ -93,7 +139,10 @@ export default function ProductForm() {
     }
   }, [currentStore, id]);
 
-  // Update category attributes when category changes
+  /**
+   * Update category attributes when category changes
+   * These attributes are used for variant options (e.g., Size, Color)
+   */
   useEffect(() => {
     const categoryId = form.watch('category_id');
     if (categoryId && categories.length > 0) {
@@ -108,6 +157,10 @@ export default function ProductForm() {
     }
   }, [form.watch('category_id'), categories]);
 
+  /**
+   * Fetch categories for the current store
+   * Used in the category selector dropdown
+   */
   const fetchCategories = async () => {
     if (!currentStore) return;
 
@@ -125,6 +178,10 @@ export default function ProductForm() {
     }
   };
 
+  /**
+   * Fetch existing product data for edit mode
+   * Populates form with current product values
+   */
   const fetchProduct = async () => {
     if (!currentStore || !id) return;
 
@@ -139,6 +196,7 @@ export default function ProductForm() {
       if (error) throw error;
 
       if (data) {
+        // Reset form with fetched data
         form.reset({
           name: data.name,
           slug: data.slug,
@@ -167,6 +225,14 @@ export default function ProductForm() {
     }
   };
 
+  // ================================================================
+  // FORM HELPERS
+  // ================================================================
+
+  /**
+   * Generate URL-friendly slug from product name
+   * Converts to lowercase, removes special chars, replaces spaces with hyphens
+   */
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -176,16 +242,28 @@ export default function ProductForm() {
       .substring(0, 100);
   };
 
+  /**
+   * Handle name input change
+   * Auto-generates slug for new products
+   */
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     form.setValue('name', name);
     
+    // Only auto-generate slug for new products
     if (!isEditing) {
       form.setValue('slug', generateSlug(name));
     }
   };
 
+  // ================================================================
+  // FORM SUBMISSION
+  // ================================================================
 
+  /**
+   * Handle form submission
+   * Creates new product or updates existing one
+   */
   const onSubmit = async (values: ProductFormValues) => {
     if (!currentStore) {
       toast.error('Please select a store first');
@@ -195,6 +273,7 @@ export default function ProductForm() {
     setIsSubmitting(true);
 
     try {
+      // Build product data object
       const productData = {
         name: values.name,
         slug: values.slug,
@@ -216,6 +295,7 @@ export default function ProductForm() {
       };
 
       if (isEditing) {
+        // Update existing product
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -224,6 +304,7 @@ export default function ProductForm() {
         if (error) throw error;
         toast.success('Product updated successfully');
       } else {
+        // Create new product
         const { error } = await supabase
           .from('products')
           .insert(productData);
@@ -241,6 +322,10 @@ export default function ProductForm() {
     }
   };
 
+  // ================================================================
+  // LOADING AND ERROR STATES
+  // ================================================================
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -257,8 +342,13 @@ export default function ProductForm() {
     );
   }
 
+  // ================================================================
+  // RENDER
+  // ================================================================
+
   return (
     <div className="space-y-6">
+      {/* Page header with back button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/products')}>
           <ArrowLeft className="w-5 h-5" />
@@ -276,8 +366,11 @@ export default function ProductForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main content */}
+            {/* ============================================================
+             * MAIN CONTENT COLUMN (2/3 width)
+             * ============================================================ */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Basic Information Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Basic Information</CardTitle>
@@ -336,6 +429,7 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Images Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Images</CardTitle>
@@ -351,6 +445,7 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Pricing Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Pricing</CardTitle>
@@ -416,6 +511,7 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Inventory Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Inventory</CardTitle>
@@ -498,6 +594,7 @@ export default function ProductForm() {
                 basePrice={form.watch('price')}
               />
 
+              {/* SEO Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>SEO</CardTitle>
@@ -542,8 +639,11 @@ export default function ProductForm() {
               </Card>
             </div>
 
-            {/* Sidebar */}
+            {/* ============================================================
+             * SIDEBAR COLUMN (1/3 width)
+             * ============================================================ */}
             <div className="space-y-6">
+              {/* Status Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Status</CardTitle>
@@ -595,6 +695,7 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Organization Card */}
               <Card>
                 <CardHeader>
                   <CardTitle>Organization</CardTitle>
@@ -607,6 +708,7 @@ export default function ProductForm() {
                       <FormItem>
                         <div className="flex items-center justify-between">
                           <FormLabel>Category</FormLabel>
+                          {/* Quick category creation modal */}
                           <QuickCategoryModal
                             storeId={currentStore.id}
                             onCategoryCreated={(categoryId, categoryName) => {
@@ -639,6 +741,7 @@ export default function ProductForm() {
                 </CardContent>
               </Card>
 
+              {/* Action Buttons */}
               <div className="flex gap-4">
                 <Button
                   type="button"
