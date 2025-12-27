@@ -6,6 +6,19 @@
  * Displays available section types that can be added to the page.
  * Organized by category with icons and descriptions.
  * 
+ * ARCHITECTURE:
+ * - Categories are collapsible for better organization
+ * - Each section type is defined in SECTION_DEFINITIONS (constants.ts)
+ * - Icons are mapped from Lucide React icons
+ * - Header/footer sections are excluded (managed separately)
+ * 
+ * HOW TO EXTEND (Adding a new section type):
+ * 1. Add the section type to SectionType enum in types.ts
+ * 2. Add the section definition in SECTION_DEFINITIONS (constants.ts)
+ * 3. If using a new icon, add it to iconMap below
+ * 4. Add the field renderer in SectionEditor.tsx
+ * 5. Add the preview renderer in PreviewFrame.tsx
+ * 
  * ============================================================================
  */
 
@@ -50,7 +63,15 @@ import {
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
 import { SectionType } from '../types';
 
-// Icon mapping
+/**
+ * Icon mapping from string names to Lucide React components
+ * 
+ * HOW TO ADD NEW ICONS:
+ * 1. Import the icon from lucide-react at the top of this file
+ * 2. Add mapping below: 'IconName': IconComponent
+ * 
+ * Note: Icon names come from SECTION_DEFINITIONS in constants.ts
+ */
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Image,
   Layers,
@@ -84,13 +105,22 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Layout,
 };
 
+/**
+ * Props for the SectionPalette component
+ * 
+ * @property onAddSection - Callback when a section type is selected for addition
+ */
 interface SectionPaletteProps {
   onAddSection: (type: SectionType) => void;
 }
 
 export function SectionPalette({ onAddSection }: SectionPaletteProps) {
+  // Track which categories are expanded (hero and products open by default)
   const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products']);
 
+  /**
+   * Toggle a category's expanded/collapsed state
+   */
   const toggleCategory = (categoryId: string) => {
     setOpenCategories(prev =>
       prev.includes(categoryId)
@@ -99,6 +129,10 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
     );
   };
 
+  /**
+   * Get the icon component for a category
+   * Used for category header display
+   */
   const getCategoryIcon = (categoryId: string) => {
     switch (categoryId) {
       case 'hero': return Image;
@@ -111,6 +145,10 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
     }
   };
 
+  /**
+   * Group sections by their category for organized display
+   * Excludes header/footer as they're managed separately
+   */
   const sectionsByCategory = Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
     if (!acc[def.category]) acc[def.category] = [];
     // Skip header and footer from palette (they're managed separately)
@@ -122,13 +160,16 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
 
   return (
     <div className="p-3">
+      {/* Section header */}
       <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
         <Plus className="w-4 h-4" />
         Add Section
       </h3>
       
+      {/* Scrollable list of categories and sections */}
       <ScrollArea className="h-64">
         <div className="space-y-1">
+          {/* Render each category as a collapsible group */}
           {SECTION_CATEGORIES.map(category => {
             const sections = sectionsByCategory[category.id] || [];
             if (sections.length === 0) return null;
@@ -142,6 +183,7 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
                 open={isOpen}
                 onOpenChange={() => toggleCategory(category.id)}
               >
+                {/* Category header - click to expand/collapse */}
                 <CollapsibleTrigger asChild>
                   <Button
                     variant="ghost"
@@ -158,8 +200,11 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
                     />
                   </Button>
                 </CollapsibleTrigger>
+                
+                {/* Category contents - list of section types */}
                 <CollapsibleContent className="pl-4 space-y-1 mt-1">
                   {sections.map(section => {
+                    // Get icon from mapping, fallback to Layout
                     const Icon = iconMap[section.icon] || Layout;
                     return (
                       <Button
