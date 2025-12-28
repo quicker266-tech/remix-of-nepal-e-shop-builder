@@ -1,83 +1,119 @@
 # Changelog
 
-## [0.4.0] - 2024-12-28
-
-### Fixed - Store Builder Core Functionality
-- **Complete Preview Renderers**: Added full preview rendering for all 26 section types (hero_banner, hero_slider, hero_video, featured_products, product_grid, product_carousel, new_arrivals, best_sellers, category_grid, category_banner, text_block, image_text, gallery, testimonials, faq, announcement_bar, newsletter, countdown, promo_banner, trust_badges, brand_logos, social_feed, spacer, divider, custom_html)
-- **Complete Section Editors**: Added dedicated field editors for all section types with proper form controls
-- **Array Field Management**: Slides, testimonials, FAQs, gallery images, trust badges, and brand logos can now be added/edited/removed
-- **Theme-Aware Preview**: Preview frame now applies theme CSS variables for colors, typography, and layout
-- **Responsive Preview**: All section previews now adapt to desktop/tablet/mobile modes
-
-### Remaining Tasks (TODO)
-- Phase 2: Apply full theme styling to preview sections
-- Phase 3: Build customer-facing storefront renderer (StorePage.tsx)
-- Phase 4: Add routes, polish UX, toast notifications
-
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
-## [Unreleased] - 2025-12-27
-
-### Documentation
-- Added comprehensive JSDoc comments to all Store Builder editor components:
-  - `EditorHeader.tsx` - Preview controls and publish actions
-  - `SectionPalette.tsx` - Section type selection with icon mapping
-  - `SectionList.tsx` - Drag-and-drop section management
-  - `SectionEditor.tsx` - Section configuration with field renderers
-  - `PageManager.tsx` - Page CRUD operations
-  - `ThemeEditor.tsx` - Theme customization (colors, fonts, layout)
-  - `PreviewFrame.tsx` - Live preview rendering
-- Added JSDoc comments to Context files:
-  - `AuthContext.tsx` - Authentication flow and role management
-  - `StoreContext.tsx` - Multi-tenant store selection
-  - `CartContext.tsx` - Shopping cart with localStorage persistence
-- Added JSDoc comments to key pages:
-  - `ProductForm.tsx` - Product create/edit with validation
-  - `StoreCatalog.tsx` - Customer-facing product catalog
-
----
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### 2024-12-27 - Store Builder Visual Editor
+### Planned
+- Phase 4: Header/footer components for storefront
+- Phase 4: Toast notifications for Store Builder actions
+- Phase 4: Image upload integration for section backgrounds
 
-#### Added
-- **Database Schema** (`supabase/migrations/`)
-  - `store_themes` - Store theme configuration (colors, typography, layout)
-  - `store_pages` - Custom page management (homepage, about, contact, etc.)
-  - `page_sections` - Drag-drop page sections with JSONB configuration
-  - `store_navigation` - Header/footer navigation menus
-  - `store_header_footer` - Global header/footer settings
-  - All tables include RLS policies for security
+---
 
-- **Store Builder Components** (`src/components/store-builder/`)
-  - `StoreBuilder.tsx` - Main editor container with tabs for sections/theme/pages
-  - `types.ts` - TypeScript definitions for all section configurations
-  - `constants.ts` - Section definitions, available fonts, default theme values
+## [0.5.0] - 2025-12-28
 
-- **Editor Components** (`src/components/store-builder/editor/`)
-  - `EditorHeader.tsx` - Top bar with preview modes (desktop/tablet/mobile), zoom, publish
-  - `SectionPalette.tsx` - Collapsible palette to add new sections by category
-  - `SectionList.tsx` - Drag-and-drop reorderable list of page sections
-  - `SectionEditor.tsx` - Configuration panel for editing section properties
-  - `PageManager.tsx` - Create, edit, delete store pages
-  - `ThemeEditor.tsx` - Edit colors, fonts, and layout settings
-  - `PreviewFrame.tsx` - Live preview with responsive viewport simulation
+### Added - Customer-Facing Storefront Renderer (Phase 3 Complete)
 
-- **Custom Hooks** (`src/hooks/useStoreBuilder.ts`)
-  - `useStoreTheme()` - Fetch and update store theme
-  - `useStorePages()` - CRUD operations for pages
-  - `usePageSections()` - CRUD operations for sections with reordering
-  - `useStoreHeaderFooter()` - Header/footer configuration
-  - `useStoreNavigation()` - Navigation menu management
+**Dynamic Page Renderer**
+- `src/pages/storefront/StorePage.tsx` - Fetches sections from database and renders them dynamically with full theme support
 
-- **Routing**
-  - Added `/dashboard/store-builder` route in `App.tsx`
-  - Added "Store Builder" link in `DashboardSidebar.tsx`
+**Production Section Components** (`src/components/storefront/sections/`)
+| Component | Purpose |
+|-----------|---------|
+| `HeroBanner.tsx` | Full-width hero with background image, overlay, and CTA buttons |
+| `HeroSlider.tsx` | Carousel hero using embla-carousel with autoplay |
+| `HeroVideo.tsx` | Video background with text overlay |
+| `ProductGrid.tsx` | Fetches and displays real products from database |
+| `FeaturedProducts.tsx` | Featured products carousel with real data |
+| `CategoryGrid.tsx` | Fetches and displays real categories from database |
+| `Newsletter.tsx` | Email signup form with customizable text |
+| `Testimonials.tsx` | Customer testimonial cards |
+| `FAQ.tsx` | Collapsible accordion for FAQs |
+| `TrustBadges.tsx` | Trust/security badge icons |
+| `TextBlock.tsx` | Rich text content block |
+| `AnnouncementBar.tsx` | Top announcement banner |
+| `Countdown.tsx` | Countdown timer with end date |
+| `ImageText.tsx` | Side-by-side image and text layout |
+| `Gallery.tsx` | Image gallery grid |
+| `PromoBanner.tsx` | Promotional banner with badge and CTA |
+| `BrandLogos.tsx` | Partner/brand logo strip |
+| `Spacer.tsx` | Configurable vertical spacing |
+| `Divider.tsx` | Horizontal divider line |
+| `index.tsx` | Central exports for all section components |
 
-#### Section Types Supported
+**Routing**
+- Added route `/store/:storeSlug/page/:pageSlug` for dynamic page rendering
+- Storefront pages now render sections created in Store Builder
+
+**Theme Integration**
+- CSS custom properties generated from `store_themes` table
+- All storefront sections respect theme colors, typography, and layout settings
+
+---
+
+## [0.4.0] - 2025-12-28
+
+### Added - Store Builder Editor Completion (Phase 1 Complete)
+
+**Preview Renderers**
+- Complete preview rendering for all 26 section types in `PreviewFrame.tsx`
+- Theme-aware previews using CSS custom properties
+- Responsive preview modes (desktop/tablet/mobile)
+
+**Section Editors**
+- Dedicated field editors for all section types in `SectionEditor.tsx`
+- Array field management for slides, testimonials, FAQs, gallery images, trust badges, and brand logos
+- Add/edit/remove functionality for all array-based configurations
+
+**Documentation**
+- JSDoc comments added to all Store Builder editor components
+- JSDoc comments added to Context files (Auth, Store, Cart)
+- JSDoc comments added to key pages (ProductForm, StoreCatalog)
+
+---
+
+## [0.3.0] - 2025-12-27
+
+### Added - Store Builder Foundation
+
+**Database Schema**
+- `store_themes` - Theme configuration (colors, typography, layout)
+- `store_pages` - Custom page management
+- `page_sections` - Page sections with JSONB configuration
+- `store_navigation` - Navigation menu management
+- `store_header_footer` - Global header/footer settings
+- RLS policies for all tables
+
+**Store Builder Components** (`src/components/store-builder/`)
+- `StoreBuilder.tsx` - Main editor container
+- `types.ts` - TypeScript definitions
+- `constants.ts` - Section definitions and defaults
+
+**Editor Components** (`src/components/store-builder/editor/`)
+- `EditorHeader.tsx` - Preview controls and publish actions
+- `SectionPalette.tsx` - Add sections by category
+- `SectionList.tsx` - Drag-and-drop section management
+- `SectionEditor.tsx` - Section configuration panel
+- `PageManager.tsx` - Page CRUD operations
+- `ThemeEditor.tsx` - Theme customization
+- `PreviewFrame.tsx` - Live preview
+
+**Custom Hooks** (`src/hooks/useStoreBuilder.ts`)
+- `useStoreTheme()` - Theme fetch and update
+- `useStorePages()` - Page CRUD
+- `usePageSections()` - Section CRUD with reordering
+- `useStoreHeaderFooter()` - Header/footer config
+- `useStoreNavigation()` - Navigation management
+
+**Routing**
+- Added `/dashboard/store-builder` route
+- Added "Store Builder" link in dashboard sidebar
+
+### Section Types Supported
 | Category | Sections |
 |----------|----------|
 | Hero | `hero_banner`, `hero_slider`, `hero_video` |
@@ -89,51 +125,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## File Structure
+## [0.2.0] - 2025-12-26
 
-```
-src/
-├── components/
-│   └── store-builder/
-│       ├── StoreBuilder.tsx      # Main editor entry point
-│       ├── types.ts              # TypeScript type definitions
-│       ├── constants.ts          # Section definitions & defaults
-│       └── editor/
-│           ├── EditorHeader.tsx  # Top navigation bar
-│           ├── SectionPalette.tsx # Add sections panel
-│           ├── SectionList.tsx   # Section list with drag-drop
-│           ├── SectionEditor.tsx # Section config form
-│           ├── PageManager.tsx   # Page CRUD
-│           ├── ThemeEditor.tsx   # Theme customization
-│           └── PreviewFrame.tsx  # Live preview
-├── hooks/
-│   └── useStoreBuilder.ts        # Data management hooks
-└── ...
-```
+### Added - Core E-commerce Features
+- Product management (CRUD, variants, categories)
+- Order management with status workflow
+- Customer management
+- Discount codes
+- Multi-tenant store architecture
+- Dashboard layouts for store admins
+- Super admin dashboard
 
 ---
 
-## Developer Notes
+## [0.1.0] - 2025-12-25
 
-### Adding a New Section Type
-
-1. Add type to `SectionType` union in `types.ts`
-2. Create config interface (e.g., `MyNewSectionConfig`) in `types.ts`
-3. Add section definition in `constants.ts` with:
-   - `type`, `label`, `icon`, `category`, `description`, `defaultConfig`
-4. Add field renderer in `SectionEditor.tsx`
-5. Add preview renderer in `PreviewFrame.tsx`
-
-### Database Migrations
-All migrations are in `supabase/migrations/`. They run automatically on deploy.
-
-### RLS Policies
-- Store members can manage their own store's data
-- Public can view published pages of active stores
-- Super admins have full access
-
----
-
-## Previous Changes
-
-_(Add earlier changes here as the project evolves)_
+### Added - Initial Project Setup
+- React 18 + TypeScript + Vite
+- Tailwind CSS with semantic design tokens
+- shadcn/ui component library
+- React Router for navigation
+- TanStack Query for data fetching
+- Supabase integration for backend
+- Authentication system with role-based access
