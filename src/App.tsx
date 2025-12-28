@@ -26,6 +26,7 @@ import AdminOverview from "./pages/admin/AdminOverview";
 import AdminStores from "./pages/admin/AdminStores";
 import AdminUsers from "./pages/admin/AdminUsers";
 import StoreCatalog from "./pages/storefront/StoreCatalog";
+import StorePage from "./pages/storefront/StorePage";
 import StoreBuilder from "./components/store-builder/StoreBuilder";
 import ProductDetail from "./pages/storefront/ProductDetail";
 import Cart from "./pages/storefront/Cart";
@@ -49,6 +50,7 @@ const App = () => (
                 
                 {/* Customer Storefront */}
                 <Route path="/store/:storeSlug" element={<StoreCatalog />} />
+                <Route path="/store/:storeSlug/page/:pageSlug" element={<StorePage />} />
                 <Route path="/store/:storeSlug/product/:productSlug" element={<ProductDetail />} />
                 <Route path="/store/:storeSlug/cart" element={<Cart />} />
                 <Route path="/store/:storeSlug/checkout" element={<Checkout />} />
