@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
+interface ShippingZone {
+  id: string;
+  name: string;
+  rate: number;
+  cities: string[];
+}
+
+interface ShippingSettings {
+  enable_shipping: boolean;
+  free_shipping_threshold: number | null;
+  default_shipping_rate: number;
+  shipping_zones: ShippingZone[];
+}
+
 export default function Checkout() {
   const { storeSlug } = useParams();
   const navigate = useNavigate();
@@ -19,6 +33,8 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [shippingSettings, setShippingSettings] = useState<ShippingSettings | null>(null);
+  const [shippingAmount, setShippingAmount] = useState(0);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -28,6 +44,72 @@ export default function Checkout() {
     city: '',
     notes: '',
   });
+
+  useEffect(() => {
+    if (storeSlug) {
+      fetchShippingSettings();
+    }
+  }, [storeSlug]);
+
+  useEffect(() => {
+    if (shippingSettings && formData.city) {
+      calculateShipping();
+    }
+  }, [shippingSettings, formData.city, cartTotal]);
+
+  const fetchShippingSettings = async () => {
+    try {
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('slug', storeSlug)
+        .single();
+
+      if (!storeData) return;
+
+      const { data } = await supabase
+        .from('store_shipping_settings')
+        .select('*')
+        .eq('store_id', storeData.id)
+        .maybeSingle();
+
+      if (data) {
+        setShippingSettings({
+          enable_shipping: data.enable_shipping ?? true,
+          free_shipping_threshold: data.free_shipping_threshold,
+          default_shipping_rate: data.default_shipping_rate ?? 0,
+          shipping_zones: (data.shipping_zones as unknown as ShippingZone[]) || [],
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching shipping settings:', error);
+    }
+  };
+
+  const calculateShipping = () => {
+    if (!shippingSettings || !shippingSettings.enable_shipping) {
+      setShippingAmount(0);
+      return;
+    }
+
+    // Check free shipping threshold
+    if (shippingSettings.free_shipping_threshold && cartTotal >= shippingSettings.free_shipping_threshold) {
+      setShippingAmount(0);
+      return;
+    }
+
+    // Find matching zone
+    const customerCity = formData.city.toLowerCase().trim();
+    const matchingZone = shippingSettings.shipping_zones.find(zone =>
+      zone.cities.some(city => city.toLowerCase().trim() === customerCity)
+    );
+
+    if (matchingZone) {
+      setShippingAmount(matchingZone.rate);
+    } else {
+      setShippingAmount(shippingSettings.default_shipping_rate);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -39,6 +121,8 @@ export default function Checkout() {
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `ORD-${timestamp}-${random}`;
   };
+
+  const orderTotal = cartTotal + shippingAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +209,8 @@ export default function Checkout() {
           order_number: newOrderNumber,
           status: 'pending',
           subtotal: cartTotal,
-          total: cartTotal,
+          shipping_amount: shippingAmount,
+          total: orderTotal,
           shipping_address: shippingAddress as unknown as Json,
           billing_address: shippingAddress as unknown as Json,
           notes: formData.notes || null,
@@ -158,7 +243,7 @@ export default function Checkout() {
         .from('customers')
         .update({
           total_orders: existingCustomer ? 1 : 1, // Increment would need RPC
-          total_spent: cartTotal,
+          total_spent: orderTotal,
         })
         .eq('id', customerId);
 
@@ -333,9 +418,38 @@ export default function Checkout() {
                     </div>
                   ))}
                   <Separator />
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>रु {cartTotal.toLocaleString()}</span>
+                  </div>
+                  
+                  {shippingSettings?.enable_shipping && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Truck className="w-4 h-4" />
+                        Shipping
+                        {shippingAmount === 0 && shippingSettings.free_shipping_threshold && cartTotal >= shippingSettings.free_shipping_threshold && (
+                          <span className="text-xs text-success">(Free)</span>
+                        )}
+                      </span>
+                      <span>
+                        {shippingAmount > 0 ? `रु ${shippingAmount.toLocaleString()}` : 'Free'}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {shippingSettings?.free_shipping_threshold && cartTotal < shippingSettings.free_shipping_threshold && (
+                    <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                      Add रु {(shippingSettings.free_shipping_threshold - cartTotal).toLocaleString()} more for free shipping!
+                    </p>
+                  )}
+                  
+                  <Separator />
+                  
                   <div className="flex justify-between font-semibold">
                     <span>Total</span>
-                    <span className="text-primary">रु {cartTotal.toLocaleString()}</span>
+                    <span className="text-primary">रु {orderTotal.toLocaleString()}</span>
                   </div>
                   <Button 
                     type="submit" 

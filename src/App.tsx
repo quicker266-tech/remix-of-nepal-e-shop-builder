@@ -19,6 +19,8 @@ import OrderDetails from "./pages/dashboard/orders/OrderDetails";
 import CustomersList from "./pages/dashboard/customers/CustomersList";
 import DiscountsList from "./pages/dashboard/discounts/DiscountsList";
 import StoreSettings from "./pages/dashboard/settings/StoreSettings";
+import ShippingSettings from "./pages/dashboard/shipping/ShippingSettings";
+import ExtensionsList from "./pages/dashboard/extensions/ExtensionsList";
 import CategoriesList from "./pages/dashboard/categories/CategoriesList";
 import ProfilePage from "./pages/dashboard/profile/ProfilePage";
 import SuperAdminLayout from "./layouts/SuperAdminLayout";
@@ -67,6 +69,8 @@ const App = () => (
                   <Route path="orders/:id" element={<OrderDetails />} />
                   <Route path="customers" element={<CustomersList />} />
                   <Route path="discounts" element={<DiscountsList />} />
+                  <Route path="shipping" element={<ShippingSettings />} />
+                  <Route path="extensions" element={<ExtensionsList />} />
                   <Route path="settings" element={<StoreSettings />} />
                   <Route path="store-builder" element={<StoreBuilder />} />
                   <Route path="profile" element={<ProfilePage />} />

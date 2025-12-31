@@ -14,6 +14,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2025-12-31
+
+### Fixed - Critical Store Builder Bugs
+- **Cross-store data leakage**: Editor state now resets when switching stores
+- **Store editor scrollability**: Preview area now scrolls properly with many sections
+- **Layout controls**: Border Radius and Section Padding now use dropdown selectors
+
+### Added - Shipping & Extensions
+- **Shipping Settings page** (`/dashboard/shipping`) - Configure delivery zones and rates
+- **Extensions page** (`/dashboard/extensions`) - Enable integrations like Google Analytics, WhatsApp Chat
+- **Checkout shipping integration** - Dynamic shipping calculation with zone-based rates and free shipping threshold
+
+### Database
+- New table: `store_shipping_settings` - Store shipping configuration
+- New table: `store_extensions` - Store extension configurations with RLS policies
+
+---
+
 ## [0.5.0] - 2025-12-28
 
 ### Added - Customer-Facing Storefront Renderer (Phase 3 Complete)
