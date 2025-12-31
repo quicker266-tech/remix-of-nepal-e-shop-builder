@@ -19,7 +19,25 @@
 // ENUMS
 // ============================================================================
 
+/**
+ * Page types for stores - matches database enum
+ * 
+ * NOTE: The database has a limited set of page_types. For special pages like
+ * cart, checkout, profile, we use 'custom' type but identify them by slug.
+ */
 export type PageType = 'homepage' | 'about' | 'contact' | 'policy' | 'custom';
+
+/**
+ * Extended page type for UI purposes - includes special pages
+ * identified by slug (cart, checkout, profile, catalog, product_detail)
+ */
+export type ExtendedPageType = 
+  | PageType
+  | 'cart'
+  | 'checkout' 
+  | 'profile'
+  | 'catalog'
+  | 'product_detail';
 
 export type SectionType =
   // Header/Footer
@@ -106,6 +124,29 @@ export interface StorePage {
   show_footer: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Get the extended page type based on page_type and slug
+ * This allows us to identify special pages like cart, checkout by their slug
+ */
+export function getExtendedPageType(page: StorePage): ExtendedPageType {
+  // Check slug first for special pages
+  const slugMap: Record<string, ExtendedPageType> = {
+    'cart': 'cart',
+    'checkout': 'checkout',
+    'account': 'profile',
+    'profile': 'profile',
+    'products': 'catalog',
+    'catalog': 'catalog',
+    'product': 'product_detail',
+  };
+  
+  if (slugMap[page.slug]) {
+    return slugMap[page.slug];
+  }
+  
+  return page.page_type;
 }
 
 // ============================================================================

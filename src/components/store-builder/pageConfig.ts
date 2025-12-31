@@ -16,7 +16,7 @@
  * ============================================================================
  */
 
-import { PageType, SectionType } from './types';
+import { PageType, SectionType, ExtendedPageType } from './types';
 
 // All available section types for reference
 const ALL_SECTIONS: SectionType[] = [
@@ -34,12 +34,6 @@ const CONTENT_SECTIONS: SectionType[] = [
   'trust_badges', 'brand_logos', 'spacer', 'divider',
 ];
 
-// Marketing sections
-const MARKETING_SECTIONS: SectionType[] = [
-  'announcement_bar', 'newsletter', 'countdown', 'promo_banner',
-  'trust_badges', 'brand_logos',
-];
-
 // Product display sections
 const PRODUCT_SECTIONS: SectionType[] = [
   'featured_products', 'product_grid', 'product_carousel', 'new_arrivals', 'best_sellers',
@@ -47,12 +41,58 @@ const PRODUCT_SECTIONS: SectionType[] = [
 ];
 
 /**
- * Maps each PageType to the section types that can be added to that page.
+ * Maps each ExtendedPageType to the section types that can be added to that page.
  * Homepage gets full customization, other pages get limited options.
+ * 
+ * NOTE: We use ExtendedPageType here because some pages (cart, checkout, etc.)
+ * are identified by slug rather than page_type in the database.
  */
-export const PAGE_ALLOWED_SECTIONS: Record<PageType, SectionType[]> = {
+export const PAGE_ALLOWED_SECTIONS: Record<ExtendedPageType, SectionType[]> = {
   // Homepage: Full customization with all sections
   homepage: ALL_SECTIONS,
+
+  // Product Detail page: Related products, reviews, trust badges
+  product_detail: [
+    'featured_products',  // For "Related Products" / "You May Also Like"
+    'product_carousel',   // Alternative related products display
+    'testimonials',       // Can be used for product reviews
+    'faq',                // Product FAQ
+    'trust_badges',
+    'text_block',
+    'spacer',
+    'divider',
+  ],
+
+  // Catalog/Products listing page
+  catalog: [
+    'hero_banner',
+    'product_grid',
+    'category_grid',
+    'promo_banner',
+    'text_block',
+    'spacer',
+    'divider',
+  ],
+
+  // Cart page: Minimal - mostly handled by Cart component
+  cart: [
+    'featured_products',  // Recommended products
+    'promo_banner',
+    'trust_badges',
+    'spacer',
+  ],
+
+  // Checkout page: Non-customizable - handled by Checkout component
+  checkout: [
+    'trust_badges',
+    'text_block',
+  ],
+
+  // Profile page: Minimal sections
+  profile: [
+    'text_block',
+    'spacer',
+  ],
 
   // About page: Content-focused sections
   about: [
@@ -88,7 +128,7 @@ export const PAGE_ALLOWED_SECTIONS: Record<PageType, SectionType[]> = {
     'hero_banner', 'hero_slider',
     ...PRODUCT_SECTIONS,
     ...CONTENT_SECTIONS,
-    ...MARKETING_SECTIONS,
+    'announcement_bar', 'newsletter', 'countdown', 'promo_banner',
     'spacer', 'divider',
   ],
 };
@@ -97,6 +137,9 @@ export const PAGE_ALLOWED_SECTIONS: Record<PageType, SectionType[]> = {
  * Standard pages that should exist for every e-commerce store.
  * These are auto-created when a store is first set up.
  * 
+ * NOTE: Special pages like cart, checkout use 'custom' as page_type
+ * but are identified by their slug.
+ * 
  * FUTURE EXTENSIBILITY:
  * For different business types, create separate standard page configs:
  * - RESTAURANT_PAGES: menu, reservations, locations
@@ -104,7 +147,7 @@ export const PAGE_ALLOWED_SECTIONS: Record<PageType, SectionType[]> = {
  * - PORTFOLIO_PAGES: work, case-studies, clients
  */
 export interface StandardPageDefinition {
-  page_type: PageType;
+  page_type: PageType; // Database-compatible type
   title: string;
   slug: string;
   is_published: boolean;
@@ -126,7 +169,7 @@ export const ECOMMERCE_STANDARD_PAGES: StandardPageDefinition[] = [
     // Homepage sections are created via store builder
   },
   {
-    page_type: 'custom', // Using 'custom' until we extend PageType enum in DB
+    page_type: 'custom', // Using 'custom' as page_type, identified by slug
     title: 'Products',
     slug: 'products',
     is_published: true,
@@ -136,6 +179,83 @@ export const ECOMMERCE_STANDARD_PAGES: StandardPageDefinition[] = [
         section_type: 'product_grid',
         name: 'All Products',
         config: { title: 'All Products', columns: 4, rows: 4, showFilters: true },
+      },
+    ],
+  },
+  {
+    page_type: 'custom', // Product detail - special page
+    title: 'Product Page',
+    slug: 'product',
+    is_published: true,
+    is_protected: true,
+    default_sections: [
+      {
+        section_type: 'featured_products',
+        name: 'Related Products',
+        config: { title: 'You May Also Like', productCount: 4, columns: 4 },
+      },
+      {
+        section_type: 'trust_badges',
+        name: 'Trust Badges',
+        config: { 
+          title: 'Why Shop With Us',
+          badges: [
+            { id: '1', icon: 'Truck', title: 'Free Shipping', description: 'On orders over Rs. 1000' },
+            { id: '2', icon: 'Shield', title: 'Secure Payment', description: '100% secure checkout' },
+            { id: '3', icon: 'RotateCcw', title: 'Easy Returns', description: '30-day return policy' },
+          ]
+        },
+      },
+    ],
+  },
+  {
+    page_type: 'custom', // Cart - special page
+    title: 'Shopping Cart',
+    slug: 'cart',
+    is_published: true,
+    is_protected: true,
+    default_sections: [
+      {
+        section_type: 'featured_products',
+        name: 'Recommended For You',
+        config: { title: 'You Might Also Like', productCount: 4, columns: 4 },
+      },
+    ],
+  },
+  {
+    page_type: 'custom', // Checkout - special page
+    title: 'Checkout',
+    slug: 'checkout',
+    is_published: true,
+    is_protected: true,
+    default_sections: [
+      {
+        section_type: 'trust_badges',
+        name: 'Security Badges',
+        config: { 
+          badges: [
+            { id: '1', icon: 'Lock', title: 'Secure Checkout', description: 'Your data is protected' },
+            { id: '2', icon: 'CreditCard', title: 'Payment Options', description: 'COD & Online Payment' },
+          ]
+        },
+      },
+    ],
+  },
+  {
+    page_type: 'custom', // Profile - special page
+    title: 'My Account',
+    slug: 'account',
+    is_published: true,
+    is_protected: false,
+    default_sections: [
+      {
+        section_type: 'text_block',
+        name: 'Account Info',
+        config: {
+          title: 'My Account',
+          content: '<p>Manage your orders, addresses, and account settings.</p>',
+          alignment: 'left',
+        },
       },
     ],
   },
@@ -183,4 +303,4 @@ export const ECOMMERCE_STANDARD_PAGES: StandardPageDefinition[] = [
  * Protected page slugs that cannot be deleted by users.
  * These are essential pages for the store to function.
  */
-export const PROTECTED_PAGE_SLUGS = ['home', 'products'];
+export const PROTECTED_PAGE_SLUGS = ['home', 'products', 'product', 'cart', 'checkout'];

@@ -61,7 +61,7 @@ import {
   Layout,
 } from 'lucide-react';
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
-import { SectionType, PageType } from '../types';
+import { SectionType, ExtendedPageType } from '../types';
 import { PAGE_ALLOWED_SECTIONS } from '../pageConfig';
 
 /**
@@ -113,7 +113,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
  */
 interface SectionPaletteProps {
   onAddSection: (type: SectionType) => void;
-  activePageType?: PageType;
+  activePageType?: ExtendedPageType;
 }
 
 export function SectionPalette({ onAddSection, activePageType = 'homepage' }: SectionPaletteProps) {

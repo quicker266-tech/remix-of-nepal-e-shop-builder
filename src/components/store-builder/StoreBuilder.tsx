@@ -24,7 +24,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/contexts/StoreContext';
 import { useStorePages, usePageSections, useStoreTheme } from '@/hooks/useStoreBuilder';
-import { StorePage, PageSection, EditorState } from './types';
+import { StorePage, PageSection, EditorState, getExtendedPageType } from './types';
 import { SectionPalette } from './editor/SectionPalette';
 import { SectionList } from './editor/SectionList';
 import { SectionEditor } from './editor/SectionEditor';
@@ -169,7 +169,7 @@ export function StoreBuilder() {
               {/* Section Palette - Add new sections */}
               <SectionPalette 
                 onAddSection={addSection} 
-                activePageType={activePage?.page_type || 'homepage'}
+                activePageType={activePage ? getExtendedPageType(activePage) : 'homepage'}
               />
               
               {/* Section List - Current page sections */}
