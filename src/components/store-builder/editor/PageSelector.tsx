@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import { StorePage, PageType } from '../types';
+import { StorePage, ExtendedPageType, getExtendedPageType } from '../types';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -28,6 +28,7 @@ import {
   User,
   FileText,
   File,
+  Layers,
 } from 'lucide-react';
 
 interface PageSelectorProps {
@@ -36,34 +37,44 @@ interface PageSelectorProps {
   onSelectPage: (page: StorePage) => void;
 }
 
-// Get icon for page based on slug or page_type
+// Get icon for page based on extended page type
 function getPageIcon(page: StorePage) {
-  const slug = page.slug.toLowerCase();
-  const type = page.page_type;
+  const extendedType = getExtendedPageType(page);
 
-  if (slug === 'home' || type === 'homepage') return Home;
-  if (slug === 'products' || slug === 'catalog') return Package;
-  if (slug === 'about' || type === 'about') return Info;
-  if (slug === 'contact' || type === 'contact') return Phone;
-  if (slug === 'cart') return ShoppingCart;
-  if (slug === 'checkout') return CreditCard;
-  if (slug === 'profile' || slug === 'account') return User;
-  if (type === 'policy') return FileText;
-  
-  return File;
+  const iconMap: Record<ExtendedPageType, React.ComponentType<{ className?: string }>> = {
+    homepage: Home,
+    catalog: Package,
+    product_detail: Layers,
+    cart: ShoppingCart,
+    checkout: CreditCard,
+    profile: User,
+    about: Info,
+    contact: Phone,
+    policy: FileText,
+    custom: File,
+  };
+
+  return iconMap[extendedType] || File;
 }
 
 // Get page type display label
 function getPageTypeLabel(page: StorePage): string {
-  const type = page.page_type;
-  const labels: Record<PageType, string> = {
+  const extendedType = getExtendedPageType(page);
+  
+  const labels: Record<ExtendedPageType, string> = {
     homepage: 'Homepage',
+    catalog: 'Catalog',
+    product_detail: 'Product Page',
+    cart: 'Cart',
+    checkout: 'Checkout',
+    profile: 'Account',
     about: 'About',
     contact: 'Contact',
     policy: 'Policy',
     custom: 'Custom',
   };
-  return labels[type] || 'Page';
+  
+  return labels[extendedType] || 'Page';
 }
 
 export function PageSelector({ pages, activePage, onSelectPage }: PageSelectorProps) {
@@ -72,11 +83,12 @@ export function PageSelector({ pages, activePage, onSelectPage }: PageSelectorPr
     const order: Record<string, number> = {
       home: 0,
       products: 1,
-      about: 2,
-      contact: 3,
-      cart: 4,
-      checkout: 5,
-      profile: 6,
+      product: 2,
+      cart: 3,
+      checkout: 4,
+      account: 5,
+      about: 6,
+      contact: 7,
     };
     const aOrder = order[a.slug] ?? 100;
     const bOrder = order[b.slug] ?? 100;
