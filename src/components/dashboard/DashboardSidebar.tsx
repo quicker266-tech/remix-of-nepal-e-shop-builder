@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Store, LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, FolderTree, Palette } from 'lucide-react';
+import { Store, LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, FolderTree, Palette, Puzzle, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import StoreSwitcher from './StoreSwitcher';
 
@@ -11,6 +11,8 @@ const navItems = [
   { icon: ShoppingCart, label: 'Orders', path: '/dashboard/orders' },
   { icon: Users, label: 'Customers', path: '/dashboard/customers' },
   { icon: Tag, label: 'Discounts', path: '/dashboard/discounts' },
+  { icon: Truck, label: 'Shipping', path: '/dashboard/shipping' },
+  { icon: Puzzle, label: 'Extensions', path: '/dashboard/extensions' },
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
 ];
 

@@ -546,6 +546,44 @@ export type Database = {
         }
         Relationships: []
       }
+      store_extensions: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          extension_id: string
+          id: string
+          is_enabled: boolean | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          extension_id: string
+          id?: string
+          is_enabled?: boolean | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          extension_id?: string
+          id?: string
+          is_enabled?: boolean | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_extensions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_header_footer: {
         Row: {
           created_at: string
@@ -705,6 +743,47 @@ export type Database = {
             foreignKeyName: "store_pages_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_shipping_settings: {
+        Row: {
+          created_at: string | null
+          default_shipping_rate: number | null
+          enable_shipping: boolean | null
+          free_shipping_threshold: number | null
+          id: string
+          shipping_zones: Json | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_shipping_rate?: number | null
+          enable_shipping?: boolean | null
+          free_shipping_threshold?: number | null
+          id?: string
+          shipping_zones?: Json | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_shipping_rate?: number | null
+          enable_shipping?: boolean | null
+          free_shipping_threshold?: number | null
+          id?: string
+          shipping_zones?: Json | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_shipping_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },

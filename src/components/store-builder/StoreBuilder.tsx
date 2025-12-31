@@ -79,6 +79,23 @@ export function StoreBuilder() {
   } = usePageSections(activePage?.id, currentStore?.id);
 
   // ==========================================================================
+  // EFFECTS: Store Change Detection
+  // ==========================================================================
+  
+  // Reset editor state when store changes to prevent cross-store data leakage
+  useEffect(() => {
+    setActivePage(null);
+    setEditorState({
+      selectedSectionId: null,
+      isDragging: false,
+      previewMode: 'desktop',
+      showGrid: false,
+      zoom: 100,
+    });
+    setActiveTab('sections');
+  }, [currentStore?.id]);
+
+  // ==========================================================================
   // EFFECTS: Page Initialization
   // ==========================================================================
   
@@ -122,7 +139,7 @@ export function StoreBuilder() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-muted/30 overflow-hidden">
+    <div className="h-screen flex flex-col bg-muted/30">
       {/* Editor Header */}
       <EditorHeader
         store={currentStore}
@@ -188,7 +205,7 @@ export function StoreBuilder() {
         </aside>
 
         {/* Main Preview Area */}
-        <main className="flex-1 bg-muted/50 overflow-hidden flex flex-col">
+        <main className="flex-1 bg-muted/50 overflow-auto flex flex-col">
           <PreviewFrame
             store={currentStore}
             theme={theme}

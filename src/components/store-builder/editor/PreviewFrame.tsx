@@ -82,7 +82,7 @@ export function PreviewFrame({
   return (
     <div className="flex-1 overflow-auto p-4 flex justify-center">
       <div
-        className="bg-background rounded-lg shadow-lg overflow-hidden transition-all"
+        className="bg-background rounded-lg shadow-lg overflow-auto transition-all max-h-full"
         style={{
           width: previewWidths[previewMode],
           transform: `scale(${zoom / 100})`,

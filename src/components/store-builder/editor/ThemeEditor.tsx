@@ -145,23 +145,42 @@ export function ThemeEditor({ theme, onUpdate }: ThemeEditorProps) {
           <div className="flex items-center gap-2 text-sm font-medium">
             <Layout className="w-4 h-4" /> Layout
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {/* Border radius for buttons, cards, etc. */}
             <div>
               <Label className="text-xs">Border Radius</Label>
-              <Input
+              <Select
                 value={theme.layout.borderRadius}
-                onChange={(e) => onUpdate({ layout: { ...theme.layout, borderRadius: e.target.value } })}
-              />
+                onValueChange={(v) => onUpdate({ layout: { ...theme.layout, borderRadius: v } })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select radius" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">None (Square)</SelectItem>
+                  <SelectItem value="0.25rem">Small</SelectItem>
+                  <SelectItem value="0.5rem">Medium</SelectItem>
+                  <SelectItem value="0.75rem">Large</SelectItem>
+                  <SelectItem value="1rem">Extra Large</SelectItem>
+                  <SelectItem value="9999px">Pill</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Vertical padding between sections */}
             <div>
               <Label className="text-xs">Section Padding</Label>
-              <Input
+              <Select
                 value={theme.layout.sectionPadding}
-                onChange={(e) => onUpdate({ layout: { ...theme.layout, sectionPadding: e.target.value } })}
-              />
+                onValueChange={(v) => onUpdate({ layout: { ...theme.layout, sectionPadding: v } })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select padding" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1rem">Compact</SelectItem>
+                  <SelectItem value="2rem">Normal</SelectItem>
+                  <SelectItem value="3rem">Comfortable</SelectItem>
+                  <SelectItem value="4rem">Spacious (Default)</SelectItem>
+                  <SelectItem value="6rem">Extra Spacious</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
