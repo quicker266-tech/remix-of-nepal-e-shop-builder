@@ -61,7 +61,8 @@ import {
   Layout,
 } from 'lucide-react';
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
-import { SectionType } from '../types';
+import { SectionType, PageType } from '../types';
+import { PAGE_ALLOWED_SECTIONS } from '../pageConfig';
 
 /**
  * Icon mapping from string names to Lucide React components
@@ -112,11 +113,15 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
  */
 interface SectionPaletteProps {
   onAddSection: (type: SectionType) => void;
+  activePageType?: PageType;
 }
 
-export function SectionPalette({ onAddSection }: SectionPaletteProps) {
+export function SectionPalette({ onAddSection, activePageType = 'homepage' }: SectionPaletteProps) {
   // Track which categories are expanded (hero and products open by default)
   const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products']);
+
+  // Get allowed sections for the current page type
+  const allowedSections = PAGE_ALLOWED_SECTIONS[activePageType] || PAGE_ALLOWED_SECTIONS.custom;
 
   /**
    * Toggle a category's expanded/collapsed state
@@ -152,7 +157,8 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
   const sectionsByCategory = Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
     if (!acc[def.category]) acc[def.category] = [];
     // Skip header and footer from palette (they're managed separately)
-    if (type !== 'header' && type !== 'footer') {
+    // Also skip sections not allowed for this page type
+    if (type !== 'header' && type !== 'footer' && allowedSections.includes(type as SectionType)) {
       acc[def.category].push({ type: type as SectionType, ...def });
     }
     return acc;

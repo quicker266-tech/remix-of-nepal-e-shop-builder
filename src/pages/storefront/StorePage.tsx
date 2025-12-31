@@ -22,12 +22,17 @@ import {
   Spacer,
   Divider,
 } from "@/components/storefront/sections";
+import { StorefrontLayout } from "@/components/storefront/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Store {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
 }
 
 interface Theme {
@@ -72,7 +77,7 @@ export default function StorePage() {
         // 1. Fetch store by slug
         const { data: storeData, error: storeError } = await supabase
           .from("stores")
-          .select("id, name, slug")
+          .select("id, name, slug, logo_url, email, phone, address")
           .eq("slug", storeSlug)
           .eq("status", "active")
           .single();
@@ -271,7 +276,7 @@ export default function StorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <StorefrontLayout store={store}>
       {sections.map((section) => (
         <div key={section.id}>{renderSection(section)}</div>
       ))}
@@ -288,6 +293,6 @@ export default function StorePage() {
           </div>
         </div>
       )}
-    </div>
+    </StorefrontLayout>
   );
 }

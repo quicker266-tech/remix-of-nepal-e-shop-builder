@@ -28,7 +28,7 @@ import { StorePage, PageSection, EditorState } from './types';
 import { SectionPalette } from './editor/SectionPalette';
 import { SectionList } from './editor/SectionList';
 import { SectionEditor } from './editor/SectionEditor';
-import { PageManager } from './editor/PageManager';
+import { PageSelector } from './editor/PageSelector';
 import { ThemeEditor } from './editor/ThemeEditor';
 import { PreviewFrame } from './editor/PreviewFrame';
 import { EditorHeader } from './editor/EditorHeader';
@@ -60,7 +60,7 @@ export function StoreBuilder() {
     showGrid: false,          // Show alignment grid overlay
     zoom: 100,                // Preview zoom percentage (50-150)
   });
-  const [activeTab, setActiveTab] = useState<'sections' | 'theme' | 'pages'>('sections');
+  const [activeTab, setActiveTab] = useState<'sections' | 'theme'>('sections');
 
   // ==========================================================================
   // SECTIONS HOOK
@@ -152,16 +152,25 @@ export function StoreBuilder() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Section Management */}
         <aside className="w-80 bg-background border-r border-border flex flex-col">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-3 m-2 mb-0">
+          {/* Page Selector - Above tabs */}
+          <PageSelector
+            pages={pages}
+            activePage={activePage}
+            onSelectPage={setActivePage}
+          />
+
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'sections' | 'theme')} className="flex flex-col flex-1 overflow-hidden">
+            <TabsList className="grid w-full grid-cols-2 m-2 mb-0">
               <TabsTrigger value="sections">Sections</TabsTrigger>
               <TabsTrigger value="theme">Theme</TabsTrigger>
-              <TabsTrigger value="pages">Pages</TabsTrigger>
             </TabsList>
 
             <TabsContent value="sections" className="flex-1 overflow-hidden m-0 flex flex-col">
               {/* Section Palette - Add new sections */}
-              <SectionPalette onAddSection={addSection} />
+              <SectionPalette 
+                onAddSection={addSection} 
+                activePageType={activePage?.page_type || 'homepage'}
+              />
               
               {/* Section List - Current page sections */}
               <div className="flex-1 overflow-auto border-t">
@@ -189,17 +198,6 @@ export function StoreBuilder() {
                   onUpdate={updateTheme}
                 />
               )}
-            </TabsContent>
-
-            <TabsContent value="pages" className="flex-1 overflow-auto m-0">
-              <PageManager
-                pages={pages}
-                activePage={activePage}
-                onSelectPage={setActivePage}
-                onCreatePage={createPage}
-                onUpdatePage={updatePage}
-                onDeletePage={deletePage}
-              />
             </TabsContent>
           </Tabs>
         </aside>

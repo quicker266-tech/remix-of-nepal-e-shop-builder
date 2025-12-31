@@ -1,14 +1,31 @@
 import { Button } from "@/components/ui/button";
 
+/**
+ * HeroBanner component for storefront
+ * 
+ * Config keys are now aligned with SectionEditor (flat structure):
+ * - buttonText, buttonLink (primary)
+ * - secondaryButtonText, secondaryButtonLink (secondary)
+ * - backgroundImage, backgroundOverlay
+ * - textAlignment, height
+ */
 interface HeroBannerConfig {
   title?: string;
   subtitle?: string;
+  // Flat config keys matching SectionEditor
+  buttonText?: string;
+  buttonLink?: string;
+  secondaryButtonText?: string;
+  secondaryButtonLink?: string;
   backgroundImage?: string;
-  overlayOpacity?: number;
-  height?: string;
-  alignment?: string;
+  backgroundOverlay?: number; // 0-100
+  textAlignment?: 'left' | 'center' | 'right';
+  height?: 'small' | 'medium' | 'large' | 'full';
+  // Legacy support for old config format
   primaryButton?: { text?: string; url?: string };
   secondaryButton?: { text?: string; url?: string };
+  overlayOpacity?: number;
+  alignment?: string;
 }
 
 interface HeroBannerProps {
@@ -16,16 +33,19 @@ interface HeroBannerProps {
 }
 
 export function HeroBanner({ config }: HeroBannerProps) {
-  const {
-    title = "Welcome to Our Store",
-    subtitle = "Discover amazing products",
-    backgroundImage,
-    overlayOpacity = 0.5,
-    height = "large",
-    alignment = "center",
-    primaryButton,
-    secondaryButton,
-  } = config;
+  // Support both flat keys (new) and nested keys (legacy)
+  const title = config.title || "Welcome to Our Store";
+  const subtitle = config.subtitle || "Discover amazing products";
+  const backgroundImage = config.backgroundImage;
+  const overlayOpacity = (config.backgroundOverlay ?? config.overlayOpacity ?? 50) / 100;
+  const height = config.height || "large";
+  const alignment = config.textAlignment || config.alignment || "center";
+  
+  // Button config - prefer flat keys, fallback to nested
+  const primaryButtonText = config.buttonText || config.primaryButton?.text;
+  const primaryButtonUrl = config.buttonLink || config.primaryButton?.url;
+  const secondaryButtonText = config.secondaryButtonText || config.secondaryButton?.text;
+  const secondaryButtonUrl = config.secondaryButtonLink || config.secondaryButton?.url;
 
   const heightClass = {
     small: "min-h-[300px]",
@@ -70,23 +90,23 @@ export function HeroBanner({ config }: HeroBannerProps) {
         )}
         
         <div className="flex flex-wrap gap-4 justify-center">
-          {primaryButton?.text && (
+          {primaryButtonText && (
             <Button
               size="lg"
               className="bg-white text-primary hover:bg-white/90"
-              onClick={() => primaryButton.url && (window.location.href = primaryButton.url)}
+              onClick={() => primaryButtonUrl && (window.location.href = primaryButtonUrl)}
             >
-              {primaryButton.text}
+              {primaryButtonText}
             </Button>
           )}
-          {secondaryButton?.text && (
+          {secondaryButtonText && (
             <Button
               size="lg"
               variant="outline"
               className="border-white text-white hover:bg-white/10"
-              onClick={() => secondaryButton.url && (window.location.href = secondaryButton.url)}
+              onClick={() => secondaryButtonUrl && (window.location.href = secondaryButtonUrl)}
             >
-              {secondaryButton.text}
+              {secondaryButtonText}
             </Button>
           )}
         </div>
