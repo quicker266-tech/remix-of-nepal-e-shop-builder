@@ -3,13 +3,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Slide {
-  id?: string;
   title?: string;
   subtitle?: string;
   backgroundImage?: string;
   buttonText?: string;
-  buttonLink?: string;
-  // Legacy support
   buttonUrl?: string;
 }
 
@@ -17,7 +14,7 @@ interface HeroSliderConfig {
   slides?: Slide[];
   autoplay?: boolean;
   interval?: number;
-  height?: 'small' | 'medium' | 'large' | 'full';
+  height?: string;
 }
 
 interface HeroSliderProps {
@@ -65,8 +62,6 @@ export function HeroSlider({ config }: HeroSliderProps) {
   }
 
   const slide = slides[currentSlide];
-  // Support both buttonLink (new) and buttonUrl (legacy)
-  const buttonUrl = slide?.buttonLink || slide?.buttonUrl;
 
   return (
     <section className={`relative ${heightClass} overflow-hidden`}>
@@ -100,7 +95,7 @@ export function HeroSlider({ config }: HeroSliderProps) {
           <Button
             size="lg"
             className="bg-white text-primary hover:bg-white/90"
-            onClick={() => buttonUrl && (window.location.href = buttonUrl)}
+            onClick={() => slide.buttonUrl && (window.location.href = slide.buttonUrl)}
           >
             {slide.buttonText}
           </Button>

@@ -14,19 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.6.1] - 2025-12-31
-
-### Fixed - Storefront Rendering & Page System
-- **Storefront not showing configured sections**: Changed `/store/:storeSlug` route to use `StorePage` instead of `StoreCatalog`, so customer-facing stores now display the sections configured in Store Builder
-- **Pages tab only showing Homepage**: Added auto-creation of standard pages (Products, About, Contact) with default sections when accessing a store
-
-### Changed
-- PageManager UI improved: Shows all pages sorted (Homepage first, then standard, then custom), with publish/unpublish toggle and slug display
-- Standard pages (home, products, about, contact) are now protected from deletion
-- Added `/store/:storeSlug/catalog` route for direct catalog access
-
----
-
 ## [0.6.0] - 2025-12-31
 
 ### Fixed - Critical Store Builder Bugs

@@ -107,120 +107,10 @@ export function useStoreTheme(storeId: string | undefined) {
 // STORE PAGES HOOK
 // ============================================================================
 
-// Standard pages that should exist for every store
-const STANDARD_PAGES = [
-  { 
-    page_type: 'homepage' as const, 
-    title: 'Homepage', 
-    slug: 'home',
-    is_published: true,
-  },
-  { 
-    page_type: 'custom' as const, 
-    title: 'Products', 
-    slug: 'products',
-    is_published: true,
-  },
-  { 
-    page_type: 'about' as const, 
-    title: 'About Us', 
-    slug: 'about',
-    is_published: true,
-  },
-  { 
-    page_type: 'contact' as const, 
-    title: 'Contact', 
-    slug: 'contact',
-    is_published: true,
-  },
-];
-
 export function useStorePages(storeId: string | undefined) {
   const [pages, setPages] = useState<StorePage[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  // Auto-create standard pages if they don't exist
-  const ensureStandardPages = useCallback(async (existingPages: StorePage[]) => {
-    if (!storeId) return existingPages;
-
-    const existingSlugs = existingPages.map(p => p.slug);
-    const pagesToCreate = STANDARD_PAGES.filter(sp => !existingSlugs.includes(sp.slug));
-
-    if (pagesToCreate.length === 0) return existingPages;
-
-    try {
-      const { data: newPages, error } = await supabase
-        .from('store_pages')
-        .insert(pagesToCreate.map(p => ({ ...p, store_id: storeId })))
-        .select();
-
-      if (error) throw error;
-
-      // Add default sections for new pages
-      for (const page of newPages || []) {
-        await createDefaultSections(page.id, page.slug, storeId);
-      }
-
-      return [...existingPages, ...(newPages as StorePage[])];
-    } catch (error) {
-      console.error('Error creating standard pages:', error);
-      return existingPages;
-    }
-  }, [storeId]);
-
-  // Create default sections based on page type
-  const createDefaultSections = async (pageId: string, pageSlug: string, storeId: string) => {
-    const sectionsToCreate: any[] = [];
-
-    switch (pageSlug) {
-      case 'products':
-        sectionsToCreate.push({
-          page_id: pageId,
-          store_id: storeId,
-          section_type: 'product_grid',
-          name: 'All Products',
-          config: { title: 'All Products', columns: 4, rows: 4, showFilters: true },
-          sort_order: 0,
-          is_visible: true,
-        });
-        break;
-      case 'about':
-        sectionsToCreate.push({
-          page_id: pageId,
-          store_id: storeId,
-          section_type: 'text_block',
-          name: 'About Us',
-          config: { 
-            title: 'About Our Store', 
-            content: 'Welcome to our store. Tell your customers about your business, your story, and what makes you unique.',
-            alignment: 'center',
-          },
-          sort_order: 0,
-          is_visible: true,
-        });
-        break;
-      case 'contact':
-        sectionsToCreate.push({
-          page_id: pageId,
-          store_id: storeId,
-          section_type: 'text_block',
-          name: 'Contact Information',
-          config: { 
-            title: 'Contact Us', 
-            content: 'Get in touch with us. We\'d love to hear from you!',
-            alignment: 'center',
-          },
-          sort_order: 0,
-          is_visible: true,
-        });
-        break;
-    }
-
-    if (sectionsToCreate.length > 0) {
-      await supabase.from('page_sections').insert(sectionsToCreate);
-    }
-  };
 
   const fetchPages = useCallback(async () => {
     if (!storeId) return;
@@ -233,17 +123,14 @@ export function useStorePages(storeId: string | undefined) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      
-      // Ensure standard pages exist
-      const allPages = await ensureStandardPages(data as StorePage[]);
-      setPages(allPages);
+      setPages(data as StorePage[]);
     } catch (error) {
       console.error('Error fetching pages:', error);
       toast({ title: 'Error loading pages', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [storeId, toast, ensureStandardPages]);
+  }, [storeId, toast]);
 
   const createPage = async (page: Partial<StorePage>) => {
     if (!storeId) return null;

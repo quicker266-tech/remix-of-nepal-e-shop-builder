@@ -5,7 +5,24 @@
  * 
  * Manages store pages (create, select, delete).
  * Displays list of pages with type icons and publication status.
- * Shows standard pages (Homepage, Products, About, Contact) and custom pages.
+ * 
+ * ARCHITECTURE:
+ * - Quick page creation via input field
+ * - Page list with icons based on page type
+ * - Homepage cannot be deleted (only one allowed)
+ * - Each page can be selected for editing
+ * 
+ * PAGE TYPES:
+ * - homepage: Main landing page (icon: Home)
+ * - about: About us page (icon: Info)
+ * - contact: Contact page (icon: Phone)
+ * - policy: Policy pages like privacy, terms (icon: FileCheck)
+ * - custom: Any other page (icon: FileText)
+ * 
+ * HOW TO EXTEND:
+ * - Add new page types: Update PageType enum and add icon mapping
+ * - Add page templates: Modify onCreatePage to include default sections
+ * - Add inline editing: Implement onUpdatePage for title changes
  * 
  * ============================================================================
  */
@@ -14,11 +31,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Plus, FileText, Home, Info, Phone, FileCheck, Trash2, ShoppingBag, Eye, EyeOff } from 'lucide-react';
+import { Plus, FileText, Home, Info, Phone, FileCheck, Trash2 } from 'lucide-react';
 import { StorePage, PageType } from '../types';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
+/**
+ * Props for the PageManager component
+ * 
+ * @property pages - Array of store pages
+ * @property activePage - Currently selected page (null if none)
+ * @property onSelectPage - Callback when page is clicked
+ * @property onCreatePage - Async callback to create a page, returns the created page
+ * @property onUpdatePage - Callback to update page properties
+ * @property onDeletePage - Callback to delete a page by ID
+ */
 interface PageManagerProps {
   pages: StorePage[];
   activePage: StorePage | null;
@@ -29,147 +56,106 @@ interface PageManagerProps {
 }
 
 /**
- * Icon mapping for page types and slugs
+ * Icon mapping for page types
+ * Used to display appropriate icon next to each page in the list
  */
-const getPageIcon = (page: StorePage) => {
-  // Check by slug first for standard pages
-  switch (page.slug) {
-    case 'home':
-      return Home;
-    case 'products':
-      return ShoppingBag;
-    case 'about':
-      return Info;
-    case 'contact':
-      return Phone;
-    default:
-      // Then by page type
-      switch (page.page_type) {
-        case 'homepage':
-          return Home;
-        case 'about':
-          return Info;
-        case 'contact':
-          return Phone;
-        case 'policy':
-          return FileCheck;
-        default:
-          return FileText;
-      }
-  }
+const pageTypeIcons: Record<PageType, React.ComponentType<{ className?: string }>> = {
+  homepage: Home,
+  about: Info,
+  contact: Phone,
+  policy: FileCheck,
+  custom: FileText,
 };
-
-// Standard pages that cannot be deleted
-const PROTECTED_SLUGS = ['home', 'products', 'about', 'contact'];
 
 export function PageManager({
   pages,
   activePage,
   onSelectPage,
   onCreatePage,
-  onUpdatePage,
   onDeletePage,
 }: PageManagerProps) {
+  // State for the new page creation input
   const [newPageTitle, setNewPageTitle] = useState('');
 
+  /**
+   * Handle creating a new page
+   * Generates slug from title and creates as 'custom' type
+   */
   const handleCreatePage = async () => {
     if (!newPageTitle.trim()) return;
     
-    const slug = newPageTitle.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    // Generate URL-friendly slug from title
+    const slug = newPageTitle.toLowerCase().replace(/\s+/g, '-');
     
     const page = await onCreatePage({
       title: newPageTitle,
       slug,
       page_type: 'custom',
-      is_published: true,
     });
     
+    // Clear input and select the new page
     if (page) {
       setNewPageTitle('');
       onSelectPage(page);
     }
   };
 
-  const togglePublish = (page: StorePage, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUpdatePage(page.id, { is_published: !page.is_published });
-  };
-
-  // Sort pages: homepage first, then standard pages, then custom
-  const sortedPages = [...pages].sort((a, b) => {
-    const order = ['home', 'products', 'about', 'contact'];
-    const aIndex = order.indexOf(a.slug);
-    const bIndex = order.indexOf(b.slug);
-    
-    if (aIndex >= 0 && bIndex >= 0) return aIndex - bIndex;
-    if (aIndex >= 0) return -1;
-    if (bIndex >= 0) return 1;
-    return a.title.localeCompare(b.title);
-  });
-
   return (
     <div className="p-4 space-y-4">
-      {/* Page count summary */}
-      <div className="text-sm text-muted-foreground">
-        {pages.length} page{pages.length !== 1 ? 's' : ''} • {pages.filter(p => p.is_published).length} published
+      {/* ============================================================
+       * NEW PAGE CREATION: Input field + create button
+       * ============================================================ */}
+      <div className="flex gap-2">
+        <Input
+          placeholder="New page name..."
+          value={newPageTitle}
+          onChange={(e) => setNewPageTitle(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()}
+        />
+        <Button size="icon" onClick={handleCreatePage}>
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
 
-      {/* Page list */}
-      <ScrollArea className="h-[350px]">
+      {/* ============================================================
+       * PAGE LIST: Scrollable list of existing pages
+       * ============================================================ */}
+      <ScrollArea className="h-[400px]">
         <div className="space-y-1">
-          {sortedPages.map((page) => {
-            const Icon = getPageIcon(page);
-            const isProtected = PROTECTED_SLUGS.includes(page.slug);
+          {pages.map((page) => {
+            // Get appropriate icon based on page type
+            const Icon = pageTypeIcons[page.page_type];
             
             return (
               <div
                 key={page.id}
                 onClick={() => onSelectPage(page)}
                 className={cn(
-                  'flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors',
-                  activePage?.id === page.id 
-                    ? 'bg-primary/10 border border-primary/20' 
-                    : 'hover:bg-muted border border-transparent'
+                  'flex items-center gap-2 p-2 rounded-lg cursor-pointer',
+                  // Highlight active page
+                  activePage?.id === page.id ? 'bg-primary/10' : 'hover:bg-muted'
                 )}
               >
-                <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                {/* Page type icon */}
+                <Icon className="w-4 h-4 text-muted-foreground" />
                 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{page.title}</span>
-                    {isProtected && (
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
-                        Standard
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground">/{page.slug}</span>
-                </div>
+                {/* Page title (truncated if long) */}
+                <span className="flex-1 text-sm truncate">{page.title}</span>
                 
-                {/* Publish toggle */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={(e) => togglePublish(page, e)}
-                  title={page.is_published ? 'Unpublish' : 'Publish'}
-                >
-                  {page.is_published ? (
-                    <Eye className="w-3.5 h-3.5 text-green-600" />
-                  ) : (
-                    <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
-                  )}
-                </Button>
+                {/* Publication status badge */}
+                {page.is_published && (
+                  <Badge variant="secondary" className="text-xs">Live</Badge>
+                )}
                 
-                {/* Delete button (only for non-protected pages) */}
-                {!isProtected && (
+                {/* Delete button (not shown for homepage - can't delete homepage) */}
+                {page.page_type !== 'homepage' && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    className="h-6 w-6"
                     onClick={(e) => { e.stopPropagation(); onDeletePage(page.id); }}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </Button>
                 )}
               </div>
@@ -177,23 +163,6 @@ export function PageManager({
           })}
         </div>
       </ScrollArea>
-
-      {/* Create new page */}
-      <div className="pt-2 border-t">
-        <p className="text-xs text-muted-foreground mb-2">Add a custom page</p>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Page name..."
-            value={newPageTitle}
-            onChange={(e) => setNewPageTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()}
-            className="h-9"
-          />
-          <Button size="sm" onClick={handleCreatePage} disabled={!newPageTitle.trim()}>
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
