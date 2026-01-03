@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * HERO VIDEO COMPONENT
+ * ============================================================================
+ * 
+ * CONFIG FORMAT COMPATIBILITY (Option B Implementation):
+ * This component accepts both field names for backward compatibility:
+ *   - buttonUrl (original) OR buttonLink (SectionEditor)
+ * 
+ * See: docs/STORE_BUILDER_CONFIG.md for full documentation.
+ * ============================================================================
+ */
+
 import { Button } from "@/components/ui/button";
 
 interface HeroVideoConfig {
@@ -6,6 +19,7 @@ interface HeroVideoConfig {
   subtitle?: string;
   buttonText?: string;
   buttonUrl?: string;
+  buttonLink?: string; // SectionEditor uses this name
   overlayOpacity?: number;
   autoplay?: boolean;
   loop?: boolean;
@@ -22,12 +36,14 @@ export function HeroVideo({ config }: HeroVideoProps) {
     title = "Welcome",
     subtitle,
     buttonText,
-    buttonUrl,
     overlayOpacity = 0.5,
     autoplay = true,
     loop = true,
     muted = true,
   } = config;
+
+  // CONFIG COMPATIBILITY: Support both buttonUrl and buttonLink
+  const buttonUrl = config.buttonLink || config.buttonUrl;
 
   return (
     <section className="relative min-h-[600px] flex items-center justify-center overflow-hidden">
