@@ -49,8 +49,10 @@ const App = () => (
                 <Route path="/auth" element={<AuthPage />} />
                 
                 {/* Customer Storefront */}
-                <Route path="/store/:storeSlug" element={<StoreCatalog />} />
+                
+                <Route path="/store/:storeSlug" element={<StorePage />} />
                 <Route path="/store/:storeSlug/page/:pageSlug" element={<StorePage />} />
+                <Route path="/store/:storeSlug/catalog" element={<StoreCatalog />} />
                 <Route path="/store/:storeSlug/product/:productSlug" element={<ProductDetail />} />
                 <Route path="/store/:storeSlug/cart" element={<Cart />} />
                 <Route path="/store/:storeSlug/checkout" element={<Checkout />} />
