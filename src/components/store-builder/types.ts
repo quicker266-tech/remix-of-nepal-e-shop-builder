@@ -56,6 +56,8 @@ export type SectionType =
   | 'hero_banner' | 'hero_slider' | 'hero_video'
   // Product Sections
   | 'featured_products' | 'product_grid' | 'product_carousel' | 'new_arrivals' | 'best_sellers'
+  // Product Page Specific (Step 2.2)
+  | 'product_filters' | 'product_sort' | 'recently_viewed' | 'recommended_products' | 'product_reviews'
   // Category Sections
   | 'category_grid' | 'category_banner'
   // Content Sections
@@ -341,6 +343,42 @@ export interface CustomHtmlConfig {
   css?: string;
 }
 
+// ============================================================================
+// PRODUCT PAGE SPECIFIC SECTION CONFIGS (Step 2.2)
+// ============================================================================
+
+export interface ProductFiltersConfig {
+  showPriceFilter: boolean;
+  showCategoryFilter: boolean;
+  showAttributeFilters: boolean;
+  layout: 'sidebar' | 'horizontal' | 'drawer';
+}
+
+export interface ProductSortConfig {
+  options: Array<'newest' | 'price_low' | 'price_high' | 'name_asc' | 'name_desc' | 'bestselling'>;
+  defaultSort: 'newest' | 'price_low' | 'price_high' | 'name_asc' | 'name_desc' | 'bestselling';
+}
+
+export interface RecentlyViewedConfig {
+  title?: string;
+  productCount?: number;
+  columns?: 2 | 3 | 4 | 5;
+}
+
+export interface RecommendedProductsConfig {
+  title?: string;
+  productCount?: number;
+  columns?: 2 | 3 | 4 | 5;
+  source?: 'related' | 'category' | 'bestselling';
+}
+
+export interface ProductReviewsConfig {
+  title?: string;
+  showRatingSummary: boolean;
+  showWriteReview: boolean;
+  sortBy: 'newest' | 'oldest' | 'highest' | 'lowest';
+}
+
 // Union type for all section configs
 export type SectionConfig =
   | HeroBannerConfig
@@ -365,6 +403,12 @@ export type SectionConfig =
   | SpacerConfig
   | DividerConfig
   | CustomHtmlConfig
+  // Product Page Specific (Step 2.2)
+  | ProductFiltersConfig
+  | ProductSortConfig
+  | RecentlyViewedConfig
+  | RecommendedProductsConfig
+  | ProductReviewsConfig
   | Record<string, unknown>;
 
 // ============================================================================

@@ -59,9 +59,11 @@ import {
   Package,
   FolderTree,
   Layout,
+  Filter,
 } from 'lucide-react';
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
-import { SectionType } from '../types';
+import { SectionType, PageType } from '../types';
+import { PAGE_TYPE_SECTIONS, isCustomizablePage } from '../constants/pageTypeSections';
 
 /**
  * Icon mapping from string names to Lucide React components
@@ -103,20 +105,29 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Package,
   FolderTree,
   Layout,
+  Filter,
 };
 
 /**
  * Props for the SectionPalette component
  * 
  * @property onAddSection - Callback when a section type is selected for addition
+ * @property pageType - Current page type to filter available sections
  */
 interface SectionPaletteProps {
   onAddSection: (type: SectionType) => void;
+  pageType?: PageType;
 }
 
-export function SectionPalette({ onAddSection }: SectionPaletteProps) {
+export function SectionPalette({ onAddSection, pageType = 'homepage' }: SectionPaletteProps) {
   // Track which categories are expanded (hero and products open by default)
   const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products']);
+
+  // Get allowed sections for current page type
+  const allowedSections = PAGE_TYPE_SECTIONS[pageType] || [];
+  const canCustomize = isCustomizablePage(pageType);
+
+  console.log('[Step 2.1] Section palette filtered for page type:', pageType, `(${allowedSections.length} sections available)`);
 
   /**
    * Toggle a category's expanded/collapsed state
@@ -148,8 +159,12 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
   /**
    * Group sections by their category for organized display
    * Excludes header/footer as they're managed separately
+   * Filters by allowed sections for current page type
    */
   const sectionsByCategory = Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
+    // Skip if not in allowed sections for this page type
+    if (!allowedSections.includes(type as SectionType)) return acc;
+    
     if (!acc[def.category]) acc[def.category] = [];
     // Skip header and footer from palette (they're managed separately)
     if (type !== 'header' && type !== 'footer') {
@@ -157,6 +172,21 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
     }
     return acc;
   }, {} as Record<string, Array<{ type: SectionType; label: string; icon: string; description: string }>>);
+
+  // Show message for system pages with no customizable sections
+  if (!canCustomize) {
+    return (
+      <div className="p-4 text-center">
+        <div className="bg-muted/50 rounded-lg p-4">
+          <Layout className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+          <h3 className="text-sm font-medium text-foreground mb-1">System Page</h3>
+          <p className="text-xs text-muted-foreground">
+            This page uses built-in components and doesn't support custom sections.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-3">

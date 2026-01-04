@@ -378,6 +378,71 @@ export const SECTION_DEFINITIONS: Record<SectionType, SectionDefinition> = {
       width: 'container',
     },
   },
+
+  // =========================================================================
+  // PRODUCT PAGE SPECIFIC SECTIONS (Step 2.2)
+  // =========================================================================
+  product_filters: {
+    type: 'product_filters',
+    label: 'Product Filters',
+    icon: 'Filter',
+    category: 'products',
+    description: 'Sidebar filters for products (price, category, attributes)',
+    defaultConfig: {
+      showPriceFilter: true,
+      showCategoryFilter: true,
+      showAttributeFilters: true,
+      layout: 'sidebar',
+    },
+  },
+  product_sort: {
+    type: 'product_sort',
+    label: 'Product Sort',
+    icon: 'ArrowUpDown',
+    category: 'products',
+    description: 'Sort dropdown for products',
+    defaultConfig: {
+      options: ['newest', 'price_low', 'price_high', 'name_asc', 'name_desc'],
+      defaultSort: 'newest',
+    },
+  },
+  recently_viewed: {
+    type: 'recently_viewed',
+    label: 'Recently Viewed',
+    icon: 'Clock',
+    category: 'products',
+    description: 'Display recently viewed products',
+    defaultConfig: {
+      title: 'Recently Viewed',
+      productCount: 4,
+      columns: 4,
+    },
+  },
+  recommended_products: {
+    type: 'recommended_products',
+    label: 'Recommended Products',
+    icon: 'Sparkles',
+    category: 'products',
+    description: 'Show recommended products based on browsing',
+    defaultConfig: {
+      title: 'You May Also Like',
+      productCount: 4,
+      columns: 4,
+    },
+  },
+  product_reviews: {
+    type: 'product_reviews',
+    label: 'Product Reviews',
+    icon: 'Star',
+    category: 'products',
+    description: 'Customer reviews and ratings section',
+    defaultConfig: {
+      title: 'Customer Reviews',
+      showRatingSummary: true,
+      showWriteReview: true,
+      sortBy: 'newest',
+    },
+  },
 };
 
 // ============================================================================
