@@ -1,16 +1,3 @@
-/**
- * ============================================================================
- * HERO SLIDER COMPONENT
- * ============================================================================
- * 
- * CONFIG FORMAT COMPATIBILITY (Option B Implementation):
- * Slide objects accept both field names for backward compatibility:
- *   - buttonUrl (original) OR buttonLink (SectionEditor)
- * 
- * See: docs/STORE_BUILDER_CONFIG.md for full documentation.
- * ============================================================================
- */
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,7 +8,6 @@ interface Slide {
   backgroundImage?: string;
   buttonText?: string;
   buttonUrl?: string;
-  buttonLink?: string; // SectionEditor uses this name
 }
 
 interface HeroSliderConfig {
@@ -109,11 +95,7 @@ export function HeroSlider({ config }: HeroSliderProps) {
           <Button
             size="lg"
             className="bg-white text-primary hover:bg-white/90"
-            onClick={() => {
-              // CONFIG COMPATIBILITY: Support both buttonUrl and buttonLink
-              const url = slide.buttonLink || slide.buttonUrl;
-              if (url) window.location.href = url;
-            }}
+            onClick={() => slide.buttonUrl && (window.location.href = slide.buttonUrl)}
           >
             {slide.buttonText}
           </Button>

@@ -1,25 +1,3 @@
-/**
- * ============================================================================
- * HERO BANNER COMPONENT
- * ============================================================================
- * 
- * CONFIG FORMAT COMPATIBILITY (Option B Implementation):
- * This component accepts BOTH config formats for backward compatibility:
- * 
- * Format A (SectionEditor saves this - flat structure):
- *   { buttonText: "Shop Now", buttonLink: "/products", secondaryButtonText: "...", secondaryButtonLink: "..." }
- * 
- * Format B (Original storefront format - nested structure):
- *   { primaryButton: { text: "Shop Now", url: "/products" }, secondaryButton: { text: "...", url: "..." } }
- * 
- * FUTURE MIGRATION (Option A):
- * To migrate to a single format, update SectionEditor.tsx HeroBannerFields to save
- * in nested format, then run a database migration to convert existing configs.
- * See: docs/STORE_BUILDER_CONFIG.md for full migration guide.
- * 
- * ============================================================================
- */
-
 import { Button } from "@/components/ui/button";
 
 interface HeroBannerConfig {
@@ -27,18 +5,10 @@ interface HeroBannerConfig {
   subtitle?: string;
   backgroundImage?: string;
   overlayOpacity?: number;
-  backgroundOverlay?: number; // SectionEditor uses this name
   height?: string;
   alignment?: string;
-  textAlignment?: string; // SectionEditor uses this name
-  // Format B (nested)
   primaryButton?: { text?: string; url?: string };
   secondaryButton?: { text?: string; url?: string };
-  // Format A (flat - from SectionEditor)
-  buttonText?: string;
-  buttonLink?: string;
-  secondaryButtonText?: string;
-  secondaryButtonLink?: string;
 }
 
 interface HeroBannerProps {
@@ -50,21 +20,12 @@ export function HeroBanner({ config }: HeroBannerProps) {
     title = "Welcome to Our Store",
     subtitle = "Discover amazing products",
     backgroundImage,
+    overlayOpacity = 0.5,
     height = "large",
+    alignment = "center",
+    primaryButton,
+    secondaryButton,
   } = config;
-
-  // CONFIG COMPATIBILITY: Support both flat (SectionEditor) and nested (original) formats
-  const overlayOpacity = config.backgroundOverlay !== undefined 
-    ? config.backgroundOverlay / 100 
-    : config.overlayOpacity ?? 0.5;
-  
-  const alignment = config.textAlignment || config.alignment || "center";
-  
-  // Button config: prefer flat format (from SectionEditor), fallback to nested
-  const primaryButtonText = config.buttonText || config.primaryButton?.text;
-  const primaryButtonUrl = config.buttonLink || config.primaryButton?.url;
-  const secondaryButtonText = config.secondaryButtonText || config.secondaryButton?.text;
-  const secondaryButtonUrl = config.secondaryButtonLink || config.secondaryButton?.url;
 
   const heightClass = {
     small: "min-h-[300px]",
@@ -109,23 +70,23 @@ export function HeroBanner({ config }: HeroBannerProps) {
         )}
         
         <div className="flex flex-wrap gap-4 justify-center">
-          {primaryButtonText && (
+          {primaryButton?.text && (
             <Button
               size="lg"
               className="bg-white text-primary hover:bg-white/90"
-              onClick={() => primaryButtonUrl && (window.location.href = primaryButtonUrl)}
+              onClick={() => primaryButton.url && (window.location.href = primaryButton.url)}
             >
-              {primaryButtonText}
+              {primaryButton.text}
             </Button>
           )}
-          {secondaryButtonText && (
+          {secondaryButton?.text && (
             <Button
               size="lg"
               variant="outline"
               className="border-white text-white hover:bg-white/10"
-              onClick={() => secondaryButtonUrl && (window.location.href = secondaryButtonUrl)}
+              onClick={() => secondaryButton.url && (window.location.href = secondaryButton.url)}
             >
-              {secondaryButtonText}
+              {secondaryButton.text}
             </Button>
           )}
         </div>

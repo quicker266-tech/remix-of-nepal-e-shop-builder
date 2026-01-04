@@ -101,8 +101,6 @@ interface HeroBannerConfig {
 }
 ```
 
-> **Important**: Section config formats differ between SectionEditor (flat) and original storefront components (nested). Components now support both formats. See [STORE_BUILDER_CONFIG.md](./STORE_BUILDER_CONFIG.md) for details.
-
 ---
 
 ## Storefront Renderer
