@@ -331,6 +331,7 @@ export type Database = {
           mobile_config: Json | null
           name: string
           page_id: string
+          position: string
           section_type: Database["public"]["Enums"]["section_type"]
           sort_order: number
           store_id: string
@@ -344,6 +345,7 @@ export type Database = {
           mobile_config?: Json | null
           name: string
           page_id: string
+          position?: string
           section_type: Database["public"]["Enums"]["section_type"]
           sort_order?: number
           store_id: string
@@ -357,6 +359,7 @@ export type Database = {
           mobile_config?: Json | null
           name?: string
           page_id?: string
+          position?: string
           section_type?: Database["public"]["Enums"]["section_type"]
           sort_order?: number
           store_id?: string
