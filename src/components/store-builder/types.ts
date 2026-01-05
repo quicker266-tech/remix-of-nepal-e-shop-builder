@@ -380,6 +380,7 @@ export interface PageSection {
   config: SectionConfig;
   is_visible: boolean;
   sort_order: number;
+  position: 'above' | 'below';
   mobile_config?: SectionConfig;
   created_at: string;
   updated_at: string;
