@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { StorePage } from '../types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,10 +15,18 @@ import {
   FileText,
   Image,
   Layout,
+  Layers,
 } from 'lucide-react';
+import { SECTION_DEFINITIONS } from '../constants';
+import { 
+  getAllowedSectionTypes, 
+  canPageHaveSections, 
+  getPagePermissionInfo 
+} from '../utils/sectionPermissions';
 
 interface PageSettingsProps {
   page: StorePage;
+  sectionCount: number;
   onUpdate: (pageId: string, updates: Partial<StorePage>) => void;
 }
 
@@ -27,7 +35,7 @@ const SYSTEM_PAGE_TYPES = [
   'homepage', 'cart', 'checkout', 'profile', 'order_tracking', 'search', 'product', 'category'
 ];
 
-export function PageSettings({ page, onUpdate }: PageSettingsProps) {
+export function PageSettings({ page, sectionCount, onUpdate }: PageSettingsProps) {
   // Local state for form fields
   const [formData, setFormData] = useState({
     title: page.title,
@@ -44,6 +52,11 @@ export function PageSettings({ page, onUpdate }: PageSettingsProps) {
 
   // Check if this is a system page (slug cannot be changed)
   const isSystemPage = SYSTEM_PAGE_TYPES.includes(page.page_type);
+
+  // Get permission info for this page type
+  const permissionInfo = useMemo(() => getPagePermissionInfo(page.page_type), [page.page_type]);
+  const allowedSections = useMemo(() => getAllowedSectionTypes(page.page_type), [page.page_type]);
+  const pageCanHaveSections = useMemo(() => canPageHaveSections(page.page_type), [page.page_type]);
 
   // Reset form when page changes
   useEffect(() => {
@@ -103,6 +116,67 @@ export function PageSettings({ page, onUpdate }: PageSettingsProps) {
         <Badge variant={page.is_published ? 'default' : 'secondary'}>
           {page.is_published ? 'Published' : 'Draft'}
         </Badge>
+      </div>
+
+      <Separator />
+
+      {/* Section Configuration Info */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Layers className="h-4 w-4" />
+          Section Configuration
+        </div>
+
+        <div className="border rounded-lg p-3 bg-muted/50 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {permissionInfo.description}
+          </p>
+          
+          {pageCanHaveSections ? (
+            <>
+              {/* Allowed section types */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Allowed sections:</p>
+                {allowedSections.length > 10 ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    All sections available
+                  </Badge>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {allowedSections.slice(0, 6).map(type => (
+                      <Badge key={type} variant="secondary" className="text-xs">
+                        {SECTION_DEFINITIONS[type]?.label || type}
+                      </Badge>
+                    ))}
+                    {allowedSections.length > 6 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{allowedSections.length - 6} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Section count */}
+              {permissionInfo.maxSections !== null && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Sections used:</span>
+                  <span className={
+                    sectionCount >= permissionInfo.maxSections 
+                      ? 'text-orange-600 font-medium' 
+                      : 'text-foreground'
+                  }>
+                    {sectionCount} / {permissionInfo.maxSections}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+              Functional page - no custom sections
+            </Badge>
+          )}
+        </div>
       </div>
 
       <Separator />

@@ -9,7 +9,83 @@
  * ============================================================================
  */
 
-import { SectionDefinition, SectionType } from './types';
+import { SectionDefinition, SectionType, PageType } from './types';
+
+// ============================================================================
+// PAGE SECTION PERMISSIONS
+// ============================================================================
+// Defines which section types are allowed per page type and maximum limits.
+// This enables section type filtering in the editor.
+// ============================================================================
+
+export interface PageSectionPermission {
+  allowedSectionTypes: SectionType[] | 'all';
+  maxSections: number | null;  // null = unlimited
+  description: string;
+}
+
+export const PAGE_SECTION_PERMISSIONS: Record<PageType, PageSectionPermission> = {
+  homepage: {
+    allowedSectionTypes: 'all',
+    maxSections: null,
+    description: 'Homepage supports all section types'
+  },
+  about: {
+    allowedSectionTypes: ['text_block', 'image_text', 'gallery', 'testimonials', 'trust_badges', 'faq', 'spacer', 'divider'],
+    maxSections: 10,
+    description: 'About page supports content sections'
+  },
+  contact: {
+    allowedSectionTypes: ['text_block', 'image_text', 'spacer', 'divider'],
+    maxSections: 5,
+    description: 'Contact page supports basic content'
+  },
+  policy: {
+    allowedSectionTypes: ['text_block', 'spacer', 'divider'],
+    maxSections: 5,
+    description: 'Policy pages are primarily text-based'
+  },
+  product: {
+    allowedSectionTypes: ['text_block', 'trust_badges', 'testimonials', 'faq', 'spacer'],
+    maxSections: 5,
+    description: 'Product pages have limited customization below the product'
+  },
+  category: {
+    allowedSectionTypes: ['category_banner', 'text_block', 'spacer'],
+    maxSections: 3,
+    description: 'Category pages have limited customization'
+  },
+  cart: {
+    allowedSectionTypes: [],
+    maxSections: 0,
+    description: 'Cart is a functional page - no custom sections'
+  },
+  checkout: {
+    allowedSectionTypes: [],
+    maxSections: 0,
+    description: 'Checkout is a functional page - no custom sections'
+  },
+  profile: {
+    allowedSectionTypes: [],
+    maxSections: 0,
+    description: 'Profile is a functional page - no custom sections'
+  },
+  order_tracking: {
+    allowedSectionTypes: [],
+    maxSections: 0,
+    description: 'Order tracking is a functional page - no custom sections'
+  },
+  search: {
+    allowedSectionTypes: [],
+    maxSections: 0,
+    description: 'Search is a functional page - no custom sections'
+  },
+  custom: {
+    allowedSectionTypes: 'all',
+    maxSections: null,
+    description: 'Custom pages support all section types'
+  }
+};
 
 // ============================================================================
 // AVAILABLE GOOGLE FONTS

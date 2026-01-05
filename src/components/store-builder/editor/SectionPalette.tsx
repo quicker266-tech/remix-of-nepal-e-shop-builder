@@ -11,6 +11,7 @@
  * - Each section type is defined in SECTION_DEFINITIONS (constants.ts)
  * - Icons are mapped from Lucide React icons
  * - Header/footer sections are excluded (managed separately)
+ * - Sections are filtered based on page type permissions
  * 
  * HOW TO EXTEND (Adding a new section type):
  * 1. Add the section type to SectionType enum in types.ts
@@ -22,9 +23,10 @@
  * ============================================================================
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   Collapsible,
   CollapsibleContent,
@@ -59,9 +61,15 @@ import {
   Package,
   FolderTree,
   Layout,
+  Info,
 } from 'lucide-react';
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
-import { SectionType } from '../types';
+import { SectionType, StorePage } from '../types';
+import { 
+  getAllowedSectionTypes, 
+  canPageHaveSections, 
+  getPagePermissionInfo 
+} from '../utils/sectionPermissions';
 
 /**
  * Icon mapping from string names to Lucide React components
@@ -108,15 +116,43 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 /**
  * Props for the SectionPalette component
  * 
+ * @property activePage - Current page to filter sections for
  * @property onAddSection - Callback when a section type is selected for addition
  */
 interface SectionPaletteProps {
+  activePage: StorePage | null;
   onAddSection: (type: SectionType) => void;
 }
 
-export function SectionPalette({ onAddSection }: SectionPaletteProps) {
+export function SectionPalette({ activePage, onAddSection }: SectionPaletteProps) {
   // Track which categories are expanded (hero and products open by default)
-  const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products']);
+  const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products', 'content']);
+
+  // Get allowed section types for current page
+  const allowedSectionTypes = useMemo(() => {
+    if (!activePage) {
+      // Fallback: show all sections when no page selected
+      return Object.keys(SECTION_DEFINITIONS).filter(
+        type => type !== 'header' && type !== 'footer'
+      ) as SectionType[];
+    }
+    
+    const allowed = getAllowedSectionTypes(activePage.page_type);
+    console.log(`[1C.3] Filtering sections for page type: ${activePage.page_type}, allowed: ${allowed.length}`);
+    return allowed;
+  }, [activePage]);
+
+  // Check if page can have any sections
+  const pageCanHaveSections = useMemo(() => {
+    if (!activePage) return true;
+    return canPageHaveSections(activePage.page_type);
+  }, [activePage]);
+
+  // Get permission info for display
+  const permissionInfo = useMemo(() => {
+    if (!activePage) return null;
+    return getPagePermissionInfo(activePage.page_type);
+  }, [activePage]);
 
   /**
    * Toggle a category's expanded/collapsed state
@@ -147,16 +183,42 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
 
   /**
    * Group sections by their category for organized display
-   * Excludes header/footer as they're managed separately
+   * Only includes allowed sections for current page type
    */
-  const sectionsByCategory = Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
-    if (!acc[def.category]) acc[def.category] = [];
-    // Skip header and footer from palette (they're managed separately)
-    if (type !== 'header' && type !== 'footer') {
+  const sectionsByCategory = useMemo(() => {
+    return Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
+      // Skip header and footer (managed separately)
+      if (type === 'header' || type === 'footer') return acc;
+      
+      // Only include if section type is allowed for this page
+      if (!allowedSectionTypes.includes(type as SectionType)) return acc;
+      
+      if (!acc[def.category]) acc[def.category] = [];
       acc[def.category].push({ type: type as SectionType, ...def });
-    }
-    return acc;
-  }, {} as Record<string, Array<{ type: SectionType; label: string; icon: string; description: string }>>);
+      
+      return acc;
+    }, {} as Record<string, Array<{ type: SectionType; label: string; icon: string; description: string }>>);
+  }, [allowedSectionTypes]);
+
+  // Show message if page cannot have sections (functional pages like cart, checkout)
+  if (!pageCanHaveSections && activePage) {
+    return (
+      <div className="p-3">
+        <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Add Section
+        </h3>
+        
+        <Alert className="border-muted bg-muted/50">
+          <Info className="h-4 w-4" />
+          <AlertTitle className="text-sm">No Custom Sections</AlertTitle>
+          <AlertDescription className="text-xs text-muted-foreground">
+            {permissionInfo?.description || 'This page type does not support custom sections.'}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="p-3">
@@ -164,6 +226,11 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
       <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
         <Plus className="w-4 h-4" />
         Add Section
+        {activePage && allowedSectionTypes.length < 20 && (
+          <span className="text-xs text-muted-foreground font-normal">
+            ({allowedSectionTypes.length} available)
+          </span>
+        )}
       </h3>
       
       {/* Scrollable list of categories and sections */}
@@ -192,6 +259,9 @@ export function SectionPalette({ onAddSection }: SectionPaletteProps) {
                     <span className="flex items-center gap-2 text-sm">
                       <CategoryIcon className="w-4 h-4 text-muted-foreground" />
                       {category.label}
+                      <span className="text-xs text-muted-foreground">
+                        ({sections.length})
+                      </span>
                     </span>
                     <ChevronDown
                       className={`w-4 h-4 text-muted-foreground transition-transform ${

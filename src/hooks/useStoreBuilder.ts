@@ -29,8 +29,15 @@ import {
   StoreHeaderFooter,
   SectionType,
   SectionConfig,
+  PageType,
 } from '@/components/store-builder/types';
 import { DEFAULT_THEME, SECTION_DEFINITIONS } from '@/components/store-builder/constants';
+import { 
+  isSectionTypeAllowed, 
+  canPageHaveSections, 
+  canAddMoreSections,
+  getPagePermissionInfo 
+} from '@/components/store-builder/utils/sectionPermissions';
 
 // ============================================================================
 // STORE THEME HOOK
@@ -294,8 +301,45 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
     }
   }, [pageId, toast]);
 
-  const addSection = async (sectionType: SectionType, insertIndex?: number) => {
+  const addSection = async (sectionType: SectionType, pageType?: PageType, insertIndex?: number) => {
     if (!pageId || !storeId) return null;
+
+    // Validation: Check if page can have sections at all
+    if (pageType && !canPageHaveSections(pageType)) {
+      const info = getPagePermissionInfo(pageType);
+      console.log('[1C.5] Validation failed: page cannot have sections');
+      toast({
+        title: 'Sections not available',
+        description: info.description,
+        variant: 'destructive'
+      });
+      return null;
+    }
+
+    // Validation: Check if section type is allowed for this page type
+    if (pageType && !isSectionTypeAllowed(sectionType, pageType)) {
+      console.log('[1C.5] Validation failed: section type not allowed');
+      toast({
+        title: 'Section type not allowed',
+        description: `This section is not available for ${pageType} pages`,
+        variant: 'destructive'
+      });
+      return null;
+    }
+
+    // Validation: Check max sections limit
+    if (pageType && !canAddMoreSections(pageType, sections.length)) {
+      const info = getPagePermissionInfo(pageType);
+      console.log('[1C.5] Validation failed: max sections reached');
+      toast({
+        title: 'Maximum sections reached',
+        description: `This page supports up to ${info.maxSections} sections`,
+        variant: 'destructive'
+      });
+      return null;
+    }
+
+    console.log('[1C.5] Section validation passed, adding:', sectionType);
 
     const definition = SECTION_DEFINITIONS[sectionType];
     const newSortOrder = insertIndex !== undefined

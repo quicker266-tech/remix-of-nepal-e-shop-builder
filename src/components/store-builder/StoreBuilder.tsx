@@ -180,8 +180,14 @@ export function StoreBuilder() {
             </TabsList>
 
             <TabsContent value="sections" className="flex-1 overflow-hidden m-0 flex flex-col">
-              {/* Section Palette - Add new sections */}
-              <SectionPalette onAddSection={addSection} />
+              {/* Section Palette - Add new sections (filtered by page type) */}
+              <SectionPalette 
+                activePage={activePage} 
+                onAddSection={(sectionType) => {
+                  if (!activePage) return;
+                  addSection(sectionType, activePage.page_type);
+                }} 
+              />
               
               {/* Section List - Current page sections */}
               <div className="flex-1 overflow-auto border-t">
@@ -215,6 +221,7 @@ export function StoreBuilder() {
               {activePage ? (
                 <PageSettings
                   page={activePage}
+                  sectionCount={sections.length}
                   onUpdate={updatePage}
                 />
               ) : (

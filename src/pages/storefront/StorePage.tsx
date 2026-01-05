@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * STORE PAGE - CUSTOMER STOREFRONT RENDERER
+ * ============================================================================
+ * 
+ * Renders a complete storefront page with:
+ * - Header (if enabled for the page)
+ * - Page sections from database
+ * - Footer (if enabled for the page)
+ * 
+ * ============================================================================
+ */
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,12 +35,15 @@ import {
   Spacer,
   Divider,
 } from "@/components/storefront/sections";
+import { StorefrontHeader } from "@/components/storefront/StorefrontHeader";
+import { StorefrontFooter } from "@/components/storefront/StorefrontFooter";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Store {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string;
 }
 
 interface Theme {
@@ -50,6 +66,44 @@ interface Page {
   slug: string;
   seo_title: string | null;
   seo_description: string | null;
+  show_header: boolean;
+  show_footer: boolean;
+}
+
+interface NavItem {
+  id: string;
+  label: string;
+  url?: string;
+  page_id?: string;
+  location: string;
+  parent_id?: string;
+  is_highlighted: boolean;
+  open_in_new_tab: boolean;
+}
+
+interface HeaderFooterConfig {
+  header_config: {
+    layout?: 'logo-left' | 'logo-center' | 'logo-right';
+    sticky?: boolean;
+    showSearch?: boolean;
+    showCart?: boolean;
+    showAccount?: boolean;
+  };
+  footer_config: {
+    layout?: 'simple' | 'multi-column' | 'minimal';
+    showNewsletter?: boolean;
+    showSocialLinks?: boolean;
+    showPaymentIcons?: boolean;
+    copyrightText?: string;
+    columns?: Array<{ id: string; title: string; links: Array<{ label: string; url: string }> }>;
+  };
+  social_links: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
 }
 
 export default function StorePage() {
@@ -58,6 +112,8 @@ export default function StorePage() {
   const [theme, setTheme] = useState<Theme | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
+  const [headerFooter, setHeaderFooter] = useState<HeaderFooterConfig | null>(null);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +128,7 @@ export default function StorePage() {
         // 1. Fetch store by slug
         const { data: storeData, error: storeError } = await supabase
           .from("stores")
-          .select("id, name, slug")
+          .select("id, name, slug, logo_url")
           .eq("slug", storeSlug)
           .eq("status", "active")
           .single();
@@ -83,7 +139,7 @@ export default function StorePage() {
           return;
         }
 
-        setStore(storeData);
+        setStore(storeData as Store);
 
         // 2. Fetch store theme
         const { data: themeData } = await supabase
@@ -101,10 +157,34 @@ export default function StorePage() {
           });
         }
 
-        // 3. Fetch page by slug
+        // 3. Fetch header/footer config
+        const { data: headerFooterData } = await supabase
+          .from("store_header_footer")
+          .select("header_config, footer_config, social_links")
+          .eq("store_id", storeData.id)
+          .single();
+
+        if (headerFooterData) {
+          setHeaderFooter({
+            header_config: (headerFooterData.header_config as HeaderFooterConfig['header_config']) || {},
+            footer_config: (headerFooterData.footer_config as HeaderFooterConfig['footer_config']) || {},
+            social_links: (headerFooterData.social_links as HeaderFooterConfig['social_links']) || {},
+          });
+        }
+
+        // 4. Fetch navigation items
+        const { data: navData } = await supabase
+          .from("store_navigation")
+          .select("id, label, url, page_id, location, parent_id, is_highlighted, open_in_new_tab")
+          .eq("store_id", storeData.id)
+          .order("sort_order", { ascending: true });
+
+        setNavItems((navData as NavItem[]) || []);
+
+        // 5. Fetch page by slug (with show_header, show_footer)
         const { data: pageData, error: pageError } = await supabase
           .from("store_pages")
-          .select("id, title, slug, seo_title, seo_description")
+          .select("id, title, slug, seo_title, seo_description, show_header, show_footer")
           .eq("store_id", storeData.id)
           .eq("slug", pageSlug)
           .eq("is_published", true)
@@ -114,7 +194,7 @@ export default function StorePage() {
           // Try to find homepage
           const { data: homePage } = await supabase
             .from("store_pages")
-            .select("id, title, slug, seo_title, seo_description")
+            .select("id, title, slug, seo_title, seo_description, show_header, show_footer")
             .eq("store_id", storeData.id)
             .eq("page_type", "homepage")
             .eq("is_published", true)
@@ -125,9 +205,9 @@ export default function StorePage() {
             setLoading(false);
             return;
           }
-          setPage(homePage);
+          setPage(homePage as Page);
 
-          // 4. Fetch sections for homepage
+          // 6. Fetch sections for homepage
           const { data: sectionsData } = await supabase
             .from("page_sections")
             .select("id, section_type, config, is_visible, sort_order")
@@ -137,9 +217,9 @@ export default function StorePage() {
 
           setSections((sectionsData as Section[]) || []);
         } else {
-          setPage(pageData);
+          setPage(pageData as Page);
 
-          // 4. Fetch sections for the page
+          // 6. Fetch sections for the page
           const { data: sectionsData } = await supabase
             .from("page_sections")
             .select("id, section_type, config, is_visible, sort_order")
@@ -186,6 +266,7 @@ export default function StorePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
+        <Skeleton className="h-16 w-full" />
         <Skeleton className="h-[400px] w-full" />
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -270,23 +351,49 @@ export default function StorePage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {sections.map((section) => (
-        <div key={section.id}>{renderSection(section)}</div>
-      ))}
+  // Filter nav items by location
+  const headerNavItems = navItems.filter(item => item.location === 'header');
+  const footerNavItems = navItems.filter(item => item.location === 'footer');
 
-      {sections.length === 0 && (
-        <div className="min-h-[400px] flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Welcome to {store.name}
-            </h2>
-            <p className="text-muted-foreground">
-              This page is being set up. Check back soon!
-            </p>
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      {page?.show_header && headerFooter && (
+        <StorefrontHeader
+          store={store}
+          headerConfig={headerFooter.header_config}
+          navItems={headerNavItems}
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1">
+        {sections.map((section) => (
+          <div key={section.id}>{renderSection(section)}</div>
+        ))}
+
+        {sections.length === 0 && (
+          <div className="min-h-[400px] flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Welcome to {store.name}
+              </h2>
+              <p className="text-muted-foreground">
+                This page is being set up. Check back soon!
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      {page?.show_footer && headerFooter && (
+        <StorefrontFooter
+          store={store}
+          footerConfig={headerFooter.footer_config}
+          socialLinks={headerFooter.social_links}
+          navItems={footerNavItems}
+        />
       )}
     </div>
   );
