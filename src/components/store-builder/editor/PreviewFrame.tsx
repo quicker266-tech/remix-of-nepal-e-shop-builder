@@ -16,7 +16,7 @@
  * ============================================================================
  */
 
-import { PageSection, StoreTheme, SectionType } from '../types';
+import { PageSection, StoreTheme, SectionType, PageType } from '../types';
 import { cn } from '@/lib/utils';
 import { SPACER_HEIGHTS, HERO_HEIGHTS } from '../constants';
 import { 
@@ -24,6 +24,8 @@ import {
   Truck, RotateCcw, Lock, ShieldCheck, Package,
   Mail, HelpCircle, Clock, Building
 } from 'lucide-react';
+import { BuiltInContentPlaceholder } from './BuiltInContentPlaceholder';
+import { hasBuiltInContent } from '../utils/pageHelpers';
 
 // ============================================================================
 // TYPES
@@ -37,6 +39,7 @@ interface PreviewFrameProps {
   zoom: number;
   selectedSectionId: string | null;
   onSelectSection: (id: string | null) => void;
+  pageType?: PageType;
 }
 
 const previewWidths = {
@@ -57,6 +60,7 @@ export function PreviewFrame({
   zoom,
   selectedSectionId,
   onSelectSection,
+  pageType,
 }: PreviewFrameProps) {
   // Generate CSS variables from theme
   const themeStyles = theme ? {
@@ -78,6 +82,30 @@ export function PreviewFrame({
     '--preview-padding': theme.layout.sectionPadding,
     fontFamily: theme.typography.bodyFont,
   } as React.CSSProperties : {};
+
+  // Check if this page has built-in content that requires position-based rendering
+  const showBuiltInPlaceholder = pageType && hasBuiltInContent(pageType);
+  
+  // Split sections by position for pages with built-in content
+  const sectionsAbove = showBuiltInPlaceholder 
+    ? sections.filter(s => s.is_visible && s.position === 'above')
+    : sections.filter(s => s.is_visible);
+  const sectionsBelow = showBuiltInPlaceholder 
+    ? sections.filter(s => s.is_visible && s.position === 'below')
+    : [];
+
+  const renderSectionItem = (section: PageSection) => (
+    <div
+      key={section.id}
+      onClick={() => onSelectSection(section.id)}
+      className={cn(
+        'border-2 border-transparent cursor-pointer transition-colors',
+        selectedSectionId === section.id && 'border-primary bg-primary/5'
+      )}
+    >
+      <SectionPreview section={section} previewMode={previewMode} />
+    </div>
+  );
 
   return (
     <div className="flex-1 overflow-auto p-4 flex justify-center">
@@ -104,23 +132,23 @@ export function PreviewFrame({
 
         {/* Sections */}
         <div className="min-h-[60vh]">
-          {sections.length === 0 ? (
+          {sections.length === 0 && !showBuiltInPlaceholder ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               Add sections to see your store preview
             </div>
           ) : (
-            sections.filter(s => s.is_visible).map((section) => (
-              <div
-                key={section.id}
-                onClick={() => onSelectSection(section.id)}
-                className={cn(
-                  'border-2 border-transparent cursor-pointer transition-colors',
-                  selectedSectionId === section.id && 'border-primary bg-primary/5'
-                )}
-              >
-                <SectionPreview section={section} previewMode={previewMode} />
-              </div>
-            ))
+            <>
+              {/* Sections ABOVE built-in content */}
+              {sectionsAbove.map(renderSectionItem)}
+              
+              {/* Built-in content placeholder */}
+              {showBuiltInPlaceholder && pageType && (
+                <BuiltInContentPlaceholder pageType={pageType} />
+              )}
+              
+              {/* Sections BELOW built-in content */}
+              {sectionsBelow.map(renderSectionItem)}
+            </>
           )}
         </div>
       </div>

@@ -243,6 +243,7 @@ export function StoreBuilder() {
             zoom={editorState.zoom}
             selectedSectionId={editorState.selectedSectionId}
             onSelectSection={(id) => setEditorState({ ...editorState, selectedSectionId: id })}
+            pageType={activePage?.page_type}
           />
         </main>
 
@@ -252,7 +253,9 @@ export function StoreBuilder() {
             <SectionEditor
               section={selectedSection}
               onUpdate={(updates) => updateSectionConfig(selectedSection.id, updates)}
+              onUpdateSection={(updates) => updateSection(selectedSection.id, updates)}
               onClose={() => setEditorState({ ...editorState, selectedSectionId: null })}
+              pageType={activePage?.page_type}
             />
           </aside>
         )}

@@ -67,6 +67,7 @@ interface Section {
   config: Record<string, unknown>;
   is_visible: boolean;
   sort_order: number;
+  position: 'above' | 'below';
 }
 
 interface Page {
@@ -220,7 +221,7 @@ export default function StorePage() {
           // 6. Fetch sections for homepage
           const { data: sectionsData } = await supabase
             .from("page_sections")
-            .select("id, section_type, config, is_visible, sort_order")
+            .select("id, section_type, config, is_visible, sort_order, position")
             .eq("page_id", homePage.id)
             .eq("is_visible", true)
             .order("sort_order", { ascending: true });
@@ -232,7 +233,7 @@ export default function StorePage() {
           // 6. Fetch sections for the page
           const { data: sectionsData } = await supabase
             .from("page_sections")
-            .select("id, section_type, config, is_visible, sort_order")
+            .select("id, section_type, config, is_visible, sort_order, position")
             .eq("page_id", pageData.id)
             .eq("is_visible", true)
             .order("sort_order", { ascending: true });
@@ -379,9 +380,11 @@ export default function StorePage() {
       {/* Main Content */}
       <main className="flex-1">
         {/* Sections ABOVE built-in content */}
-        {sections.map((section) => (
-          <div key={section.id}>{renderSection(section)}</div>
-        ))}
+        {sections
+          .filter((section) => section.position === 'above')
+          .map((section) => (
+            <div key={section.id}>{renderSection(section)}</div>
+          ))}
 
         {/* Built-in Page Content based on page_type */}
         {page?.page_type === 'category' && (
@@ -390,6 +393,13 @@ export default function StorePage() {
         {page?.page_type === 'product' && (
           <ProductListingContent storeId={store.id} storeSlug={store.slug} />
         )}
+
+        {/* Sections BELOW built-in content (or all sections for pages without built-in content) */}
+        {sections
+          .filter((section) => section.position === 'below' || section.position === undefined)
+          .map((section) => (
+            <div key={section.id}>{renderSection(section)}</div>
+          ))}
 
         {/* Empty state for pages without content */}
         {sections.length === 0 && page?.page_type === 'homepage' && (

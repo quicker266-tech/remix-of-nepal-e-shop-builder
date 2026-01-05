@@ -34,22 +34,29 @@ import {
   Plus, Trash2, Video, Layout, Megaphone, Mail, Clock, Quote,
   ShieldCheck, Building, Code, ArrowUpDown, Minus, HelpCircle
 } from 'lucide-react';
-import { PageSection, SectionConfig } from '../types';
+import { PageSection, SectionConfig, PageType } from '../types';
 import { SECTION_DEFINITIONS } from '../constants';
+import { PositionToggle } from './PositionToggle';
+import { hasBuiltInContent } from '../utils/pageHelpers';
 
 interface SectionEditorProps {
   section: PageSection;
   onUpdate: (config: SectionConfig) => void;
+  onUpdateSection: (updates: Partial<PageSection>) => void;
   onClose: () => void;
+  pageType?: PageType;
 }
 
-export function SectionEditor({ section, onUpdate, onClose }: SectionEditorProps) {
+export function SectionEditor({ section, onUpdate, onUpdateSection, onClose, pageType }: SectionEditorProps) {
   const definition = SECTION_DEFINITIONS[section.section_type];
   const config = section.config as Record<string, any>;
 
   const updateField = (field: string, value: any) => {
     onUpdate({ ...config, [field]: value });
   };
+
+  // Check if this page supports position toggle
+  const showPositionToggle = pageType && hasBuiltInContent(pageType);
 
   return (
     <div className="flex flex-col h-full">
@@ -65,6 +72,17 @@ export function SectionEditor({ section, onUpdate, onClose }: SectionEditorProps
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
+          {/* Position toggle for pages with built-in content */}
+          {showPositionToggle && (
+            <>
+              <PositionToggle
+                position={section.position || 'below'}
+                onChange={(pos) => onUpdateSection({ position: pos })}
+              />
+              <Separator />
+            </>
+          )}
+          
           {renderSectionFields(section.section_type, config, updateField)}
         </div>
       </ScrollArea>
