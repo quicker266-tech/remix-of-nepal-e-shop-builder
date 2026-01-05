@@ -29,7 +29,6 @@ import { SectionPalette } from './editor/SectionPalette';
 import { SectionList } from './editor/SectionList';
 import { SectionEditor } from './editor/SectionEditor';
 import { PageSelector } from './editor/PageSelector';
-import { PageSettings } from './editor/PageSettings';
 import { ThemeEditor } from './editor/ThemeEditor';
 import { PreviewFrame } from './editor/PreviewFrame';
 import { EditorHeader } from './editor/EditorHeader';
@@ -211,17 +210,12 @@ export function StoreBuilder() {
               )}
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 overflow-auto m-0">
-              {activePage ? (
-                <PageSettings
-                  page={activePage}
-                  onUpdate={updatePage}
-                />
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <p className="text-sm">Select a page to edit settings</p>
-                </div>
-              )}
+            <TabsContent value="settings" className="flex-1 overflow-auto m-0 p-4">
+              {/* Placeholder for Step 1B.4: PageSettings component */}
+              <div className="text-center text-muted-foreground py-8">
+                <p className="text-sm">Page settings coming soon...</p>
+                <p className="text-xs mt-2">SEO, visibility, publishing options</p>
+              </div>
             </TabsContent>
           </Tabs>
         </aside>
