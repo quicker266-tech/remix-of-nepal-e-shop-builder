@@ -45,6 +45,7 @@ import {
 import { StorefrontHeader } from "@/components/storefront/StorefrontHeader";
 import { StorefrontFooter } from "@/components/storefront/StorefrontFooter";
 import { CategoryPageContent } from "@/components/storefront/pages/CategoryPageContent";
+import { ProductListingContent } from "@/components/storefront/pages/ProductListingContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Store {
@@ -385,6 +386,9 @@ export default function StorePage() {
         {/* Built-in Page Content based on page_type */}
         {page?.page_type === 'category' && (
           <CategoryPageContent storeId={store.id} storeSlug={store.slug} />
+        )}
+        {page?.page_type === 'product' && (
+          <ProductListingContent storeId={store.id} storeSlug={store.slug} />
         )}
 
         {/* Empty state for pages without content */}
