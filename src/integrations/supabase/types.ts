@@ -1089,11 +1089,6 @@ export type Database = {
         | "custom_html"
         | "spacer"
         | "divider"
-        | "product_filters"
-        | "product_sort"
-        | "recently_viewed"
-        | "recommended_products"
-        | "product_reviews"
       store_status: "pending" | "active" | "suspended" | "closed"
     }
     CompositeTypes: {
@@ -1276,11 +1271,6 @@ export const Constants = {
         "custom_html",
         "spacer",
         "divider",
-        "product_filters",
-        "product_sort",
-        "recently_viewed",
-        "recommended_products",
-        "product_reviews",
       ],
       store_status: ["pending", "active", "suspended", "closed"],
     },

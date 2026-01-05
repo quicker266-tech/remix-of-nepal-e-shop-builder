@@ -18,10 +18,3 @@ export { PromoBanner } from "./PromoBanner";
 export { BrandLogos } from "./BrandLogos";
 export { Spacer } from "./Spacer";
 export { Divider } from "./Divider";
-
-// Product Page Sections (Step 2.2)
-export { ProductFilters } from "./ProductFilters";
-export { ProductSort } from "./ProductSort";
-export { RecentlyViewed } from "./RecentlyViewed";
-export { RecommendedProducts } from "./RecommendedProducts";
-export { ProductReviews } from "./ProductReviews";

@@ -56,8 +56,6 @@ export type SectionType =
   | 'hero_banner' | 'hero_slider' | 'hero_video'
   // Product Sections
   | 'featured_products' | 'product_grid' | 'product_carousel' | 'new_arrivals' | 'best_sellers'
-  // Product Page Sections (Step 2.2)
-  | 'product_filters' | 'product_sort' | 'recently_viewed' | 'recommended_products' | 'product_reviews'
   // Category Sections
   | 'category_grid' | 'category_banner'
   // Content Sections
@@ -338,48 +336,6 @@ export interface DividerConfig {
   width?: 'full' | 'container' | 'narrow';
 }
 
-// ============================================================================
-// PRODUCT PAGE SECTION CONFIG TYPES (Step 2.2)
-// ============================================================================
-
-export interface ProductFiltersConfig {
-  showPriceFilter: boolean;
-  showCategoryFilter: boolean;
-  showAttributeFilters: boolean;
-  layout: 'sidebar' | 'horizontal' | 'drawer';
-  collapsible: boolean;
-}
-
-export interface ProductSortConfig {
-  options: Array<'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'newest' | 'popular'>;
-  defaultSort: string;
-}
-
-export interface RecentlyViewedConfig {
-  title?: string;
-  productCount: number;
-  columns: 2 | 3 | 4 | 5;
-  showPrice: boolean;
-}
-
-export interface RecommendedProductsConfig {
-  title?: string;
-  subtitle?: string;
-  productCount: number;
-  columns: 2 | 3 | 4 | 5;
-  showPrice: boolean;
-  showAddToCart: boolean;
-  algorithm: 'similar' | 'bestsellers' | 'random';
-}
-
-export interface ProductReviewsConfig {
-  title?: string;
-  showRatingBreakdown: boolean;
-  showPhotos: boolean;
-  sortBy: 'newest' | 'highest' | 'lowest' | 'helpful';
-  pageSize: number;
-}
-
 export interface CustomHtmlConfig {
   html: string;
   css?: string;
@@ -393,11 +349,6 @@ export type SectionConfig =
   | FeaturedProductsConfig
   | ProductGridConfig
   | ProductCarouselConfig
-  | ProductFiltersConfig
-  | ProductSortConfig
-  | RecentlyViewedConfig
-  | RecommendedProductsConfig
-  | ProductReviewsConfig
   | CategoryGridConfig
   | CategoryBannerConfig
   | TextBlockConfig

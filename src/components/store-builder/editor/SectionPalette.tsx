@@ -11,7 +11,6 @@
  * - Each section type is defined in SECTION_DEFINITIONS (constants.ts)
  * - Icons are mapped from Lucide React icons
  * - Header/footer sections are excluded (managed separately)
- * - Sections are filtered based on page type (Step 2.1)
  * 
  * HOW TO EXTEND (Adding a new section type):
  * 1. Add the section type to SectionType enum in types.ts
@@ -19,7 +18,6 @@
  * 3. If using a new icon, add it to iconMap below
  * 4. Add the field renderer in SectionEditor.tsx
  * 5. Add the preview renderer in PreviewFrame.tsx
- * 6. Add to PAGE_TYPE_SECTIONS in pageTypeSections.ts
  * 
  * ============================================================================
  */
@@ -61,14 +59,9 @@ import {
   Package,
   FolderTree,
   Layout,
-  AlertCircle,
-  Filter,
-  History,
-  MessageSquare,
 } from 'lucide-react';
 import { SECTION_DEFINITIONS, SECTION_CATEGORIES } from '../constants';
-import { SectionType, PageType } from '../types';
-import { getAllowedSections, getSystemPageMessage } from '../constants/pageTypeSections';
+import { SectionType } from '../types';
 
 /**
  * Icon mapping from string names to Lucide React components
@@ -110,33 +103,20 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Package,
   FolderTree,
   Layout,
-  // New icons for product page sections (Step 2.2)
-  Filter,
-  History,
-  MessageSquare,
 };
 
 /**
  * Props for the SectionPalette component
  * 
  * @property onAddSection - Callback when a section type is selected for addition
- * @property pageType - Current page type to filter available sections (Step 2.1)
  */
 interface SectionPaletteProps {
   onAddSection: (type: SectionType) => void;
-  pageType?: PageType;
 }
 
-export function SectionPalette({ onAddSection, pageType }: SectionPaletteProps) {
+export function SectionPalette({ onAddSection }: SectionPaletteProps) {
   // Track which categories are expanded (hero and products open by default)
   const [openCategories, setOpenCategories] = useState<string[]>(['hero', 'products']);
-
-  // Get allowed sections for this page type
-  const allowedSections = pageType ? getAllowedSections(pageType) : [];
-  const systemPageMessage = pageType ? getSystemPageMessage(pageType) : null;
-
-  // Log section filtering for debugging (Step 2.1)
-  console.log('[Step 2.1] Section palette filtered for page type:', pageType, `(${allowedSections.length} sections available)`);
 
   /**
    * Toggle a category's expanded/collapsed state
@@ -168,51 +148,15 @@ export function SectionPalette({ onAddSection, pageType }: SectionPaletteProps) 
   /**
    * Group sections by their category for organized display
    * Excludes header/footer as they're managed separately
-   * Filters by allowed sections for current page type (Step 2.1)
    */
   const sectionsByCategory = Object.entries(SECTION_DEFINITIONS).reduce((acc, [type, def]) => {
-    // Skip header and footer from palette (they're managed separately)
-    if (type === 'header' || type === 'footer') return acc;
-    
-    // Skip sections not allowed for this page type
-    if (pageType && !allowedSections.includes(type as SectionType)) return acc;
-    
     if (!acc[def.category]) acc[def.category] = [];
-    acc[def.category].push({ type: type as SectionType, ...def });
+    // Skip header and footer from palette (they're managed separately)
+    if (type !== 'header' && type !== 'footer') {
+      acc[def.category].push({ type: type as SectionType, ...def });
+    }
     return acc;
   }, {} as Record<string, Array<{ type: SectionType; label: string; icon: string; description: string }>>);
-
-  // Show message for system pages with no customizable sections
-  if (systemPageMessage) {
-    return (
-      <div className="p-4">
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border border-border">
-          <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-1">System Page</h4>
-            <p className="text-sm text-muted-foreground">{systemPageMessage}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show message if no sections are available
-  if (allowedSections.length === 0 && pageType) {
-    return (
-      <div className="p-4">
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border border-border">
-          <AlertCircle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-1">No Sections Available</h4>
-            <p className="text-sm text-muted-foreground">
-              This page type doesn't support customizable sections.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-3">
