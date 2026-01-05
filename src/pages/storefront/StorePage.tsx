@@ -5,8 +5,15 @@
  * 
  * Renders a complete storefront page with:
  * - Header (if enabled for the page)
+ * - Built-in page content based on page_type
  * - Page sections from database
  * - Footer (if enabled for the page)
+ * 
+ * PAGE TYPES WITH BUILT-IN CONTENT:
+ * - category: CategoryPageContent (category grid / product listing)
+ * - about: AboutPageContent (store info)
+ * - contact: ContactPageContent (contact form)
+ * - homepage: Sections only (no built-in content)
  * 
  * ============================================================================
  */
@@ -37,6 +44,7 @@ import {
 } from "@/components/storefront/sections";
 import { StorefrontHeader } from "@/components/storefront/StorefrontHeader";
 import { StorefrontFooter } from "@/components/storefront/StorefrontFooter";
+import { CategoryPageContent } from "@/components/storefront/pages/CategoryPageContent";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Store {
@@ -64,6 +72,7 @@ interface Page {
   id: string;
   title: string;
   slug: string;
+  page_type: string;
   seo_title: string | null;
   seo_description: string | null;
   show_header: boolean;
@@ -184,7 +193,7 @@ export default function StorePage() {
         // 5. Fetch page by slug (with show_header, show_footer)
         const { data: pageData, error: pageError } = await supabase
           .from("store_pages")
-          .select("id, title, slug, seo_title, seo_description, show_header, show_footer")
+          .select("id, title, slug, page_type, seo_title, seo_description, show_header, show_footer")
           .eq("store_id", storeData.id)
           .eq("slug", pageSlug)
           .eq("is_published", true)
@@ -194,7 +203,7 @@ export default function StorePage() {
           // Try to find homepage
           const { data: homePage } = await supabase
             .from("store_pages")
-            .select("id, title, slug, seo_title, seo_description, show_header, show_footer")
+            .select("id, title, slug, page_type, seo_title, seo_description, show_header, show_footer")
             .eq("store_id", storeData.id)
             .eq("page_type", "homepage")
             .eq("is_published", true)
@@ -368,11 +377,18 @@ export default function StorePage() {
 
       {/* Main Content */}
       <main className="flex-1">
+        {/* Sections ABOVE built-in content */}
         {sections.map((section) => (
           <div key={section.id}>{renderSection(section)}</div>
         ))}
 
-        {sections.length === 0 && (
+        {/* Built-in Page Content based on page_type */}
+        {page?.page_type === 'category' && (
+          <CategoryPageContent storeId={store.id} storeSlug={store.slug} />
+        )}
+
+        {/* Empty state for pages without content */}
+        {sections.length === 0 && page?.page_type === 'homepage' && (
           <div className="min-h-[400px] flex items-center justify-center">
             <div className="text-center">
               <h2 className="text-xl font-semibold text-foreground mb-2">
