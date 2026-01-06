@@ -153,99 +153,19 @@ export default function Checkout() {
 
       const newOrderNumber = generateOrderNumber();
 
-      // Create or find customer
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('store_id', storeData.id)
-        .eq('email', formData.email)
-        .maybeSingle();
+      // Create or update customer using secure RPC function
+      const { data: customerId, error: customerError } = await supabase
+        .rpc('create_or_update_checkout_customer', {
+          p_store_id: storeData.id,
+          p_email: formData.email,
+          p_full_name: formData.fullName,
+          p_phone: formData.phone,
+          p_address: formData.address,
+          p_city: formData.city,
+        });
 
-      let customerId: string;
-
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        // Update customer info
-        await supabase
-          .from('customers')
-          .update({
-            full_name: formData.fullName,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-          })
-          .eq('id', customerId);
-      } else {
-        const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert({
-            store_id: storeData.id,
-            email: formData.email,
-            full_name: formData.fullName,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-          })
-          .select()
-          .single();
-
-        if (customerError) throw customerError;
-        customerId = newCustomer.id;
-      }
-
-      // Create order
-      const shippingAddress = {
-        full_name: formData.fullName,
-        address: formData.address,
-        city: formData.city,
-        phone: formData.phone,
-      };
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          store_id: storeData.id,
-          customer_id: customerId,
-          order_number: newOrderNumber,
-          status: 'pending',
-          subtotal: cartTotal,
-          shipping_amount: shippingAmount,
-          total: orderTotal,
-          shipping_address: shippingAddress as unknown as Json,
-          billing_address: shippingAddress as unknown as Json,
-          notes: formData.notes || null,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        variant_id: item.variantId,
-        product_name: item.name,
-        variant_name: item.variantName,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Update customer stats
-      await supabase
-        .from('customers')
-        .update({
-          total_orders: existingCustomer ? 1 : 1, // Increment would need RPC
-          total_spent: orderTotal,
-        })
-        .eq('id', customerId);
+      if (customerError) throw customerError;
+      if (!customerId) throw new Error('Failed to create customer');
 
       setOrderNumber(newOrderNumber);
       setOrderComplete(true);
