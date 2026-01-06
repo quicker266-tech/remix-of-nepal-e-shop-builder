@@ -167,64 +167,6 @@ export default function Checkout() {
       if (customerError) throw customerError;
       if (!customerId) throw new Error('Failed to create customer');
 
-      // Create the order
-      const shippingAddress = {
-        fullName: formData.fullName,
-        phone: formData.phone,
-        email: formData.email,
-        address: formData.address,
-        city: formData.city,
-      };
-
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          store_id: storeData.id,
-          customer_id: customerId,
-          order_number: newOrderNumber,
-          status: 'pending',
-          subtotal: cartTotal,
-          shipping_amount: shippingAmount,
-          discount_amount: 0,
-          tax_amount: 0,
-          total: orderTotal,
-          shipping_address: shippingAddress as unknown as Json,
-          notes: formData.notes || null,
-        })
-        .select('id')
-        .single();
-
-      if (orderError) throw orderError;
-      if (!orderData) throw new Error('Failed to create order');
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: orderData.id,
-        product_id: item.productId,
-        variant_id: item.variantId || null,
-        product_name: item.name,
-        variant_name: item.variantName || null,
-        sku: null,
-        unit_price: item.price,
-        quantity: item.quantity,
-        total_price: item.price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Update customer stats
-      await supabase
-        .from('customers')
-        .update({
-          total_orders: (await supabase.from('customers').select('total_orders').eq('id', customerId).single()).data?.total_orders + 1 || 1,
-          total_spent: (await supabase.from('customers').select('total_spent').eq('id', customerId).single()).data?.total_spent + orderTotal || orderTotal,
-        })
-        .eq('id', customerId);
-
       setOrderNumber(newOrderNumber);
       setOrderComplete(true);
       clearCart();
