@@ -1012,6 +1012,17 @@ export type Database = {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
       }
+      create_or_update_checkout_customer: {
+        Args: {
+          p_address: string
+          p_city: string
+          p_email: string
+          p_full_name: string
+          p_phone: string
+          p_store_id: string
+        }
+        Returns: string
+      }
       get_standard_pages_for_business: {
         Args: { p_business_category?: string; p_business_type: string }
         Returns: {
