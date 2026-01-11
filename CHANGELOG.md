@@ -11,6 +11,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 4: Header/footer components for storefront
 - Phase 4: Toast notifications for Store Builder actions
 - Phase 4: Image upload integration for section backgrounds
+- Multi-tenant domain system (subdomains + custom domains)
+
+---
+
+## [0.8.0] - 2026-01-11
+
+### Fixed - Critical Order System Bugs
+
+**Checkout Flow (`src/pages/storefront/Checkout.tsx`)**
+- Order creation was broken - was only creating customers, now properly creates `orders` and `order_items` records
+- Customer stats increment fixed - was always setting to 1, now correctly increments `total_orders` and `total_spent`
+- Added comprehensive console logging with `[CHECKOUT]` prefix for debugging
+- Added proper error handling with detailed error messages
+
+**Dashboard Metrics (`src/pages/dashboard/DashboardHome.tsx`)**
+- Replaced hardcoded zeros with real database queries
+- Products, Orders, Customers, and Revenue now show actual counts
+- Recent Orders section displays last 5 orders with customer info
+- Added loading states and skeleton placeholders
+
+### Added - Customer Detail System
+
+**CustomerDetail Page (`src/pages/dashboard/customers/CustomerDetail.tsx`)**
+- Customer info display (name, email, phone, address)
+- Stats cards (total orders, total spent, customer since)
+- Order history with expandable cards (click to toggle)
+- Order items display with product details
+- Order summary (subtotal, shipping, tax, total)
+- Shipping address per order
+- Customer notes display
+- Link to full order details page
+
+**Clickable Customer Rows (`src/pages/dashboard/customers/CustomersList.tsx`)**
+- Added navigation to customer detail on row click
+- Added cursor-pointer and hover styling
+
+**Order Status History (Database)**
+- New table: `order_status_history` for audit trail
+- Auto-logging trigger: `trigger_log_order_status`
+- RLS policies for security
+- Indexes for performance
+
+### Database
+- New table: `order_status_history`
+  - `id` (UUID, PK)
+  - `order_id` (UUID, FK → orders)
+  - `status` (order_status enum)
+  - `notes` (TEXT)
+  - `changed_by` (UUID, FK → auth.users)
+  - `created_at` (TIMESTAMPTZ)
+- New trigger function: `log_order_status_change()` with `SET search_path = public` for security
+
+### Routes Added
+- `/dashboard/customers/:id` → CustomerDetail page
 
 ---
 

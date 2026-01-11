@@ -143,6 +143,8 @@ All production section components are in `src/components/storefront/sections/`:
 | `products` | Product catalog |
 | `categories` | Product categories |
 | `orders` | Customer orders |
+| `order_items` | Items within orders |
+| `order_status_history` | Order status audit trail |
 | `customers` | Store customers |
 
 ### Store Builder Tables
@@ -264,10 +266,11 @@ This project follows [Semantic Versioning](https://semver.org/):
 | **Minor (0.X.0)** | New features (e.g., Phase 3 storefront) |
 | **Patch (0.0.X)** | Bug fixes, minor improvements |
 
-### Current Version: 0.5.0
+### Current Version: 0.8.0
 - Phase 1: Store Builder editor ✅
 - Phase 2: Theme integration ✅
 - Phase 3: Customer storefront renderer ✅
+- Phase 3.5: Order system fix + Customer detail ✅
 - Phase 4: Header/footer, polish (TODO)
 
 ---
@@ -318,6 +321,65 @@ toast({ title: "Error", variant: "destructive" });
 - Check sections have `is_visible` set to true
 - Confirm `sort_order` is set correctly
 - Check store `status` is 'active'
+
+### Orders Not Appearing
+- Check console logs for `[CHECKOUT]` prefixed messages
+- Verify RLS policies allow insert to `orders` and `order_items`
+- Confirm customer stats are incrementing correctly
+- Check `order_status_history` for status change logs
+
+---
+
+## Order & Customer System
+
+### Checkout Flow
+The checkout process in `src/pages/storefront/Checkout.tsx`:
+1. Fetch store by slug
+2. Calculate dynamic shipping (zone-based from `store_shipping_settings`)
+3. Create/update customer via `create_or_update_checkout_customer` RPC
+4. Create order record in `orders` table
+5. Create order items in `order_items` table
+6. Update customer stats (`total_orders`, `total_spent`)
+7. Show success message and clear cart
+
+### Customer Detail Page
+`src/pages/dashboard/customers/CustomerDetail.tsx` features:
+- Customer information display (name, email, phone, address)
+- Stats cards (total orders, total spent, customer since)
+- Expandable order history with items
+- Order summary (subtotal, shipping, tax, total)
+- Shipping address and customer notes
+
+### Order Status History
+Automatic audit trail for order status changes:
+- Trigger: `log_order_status_change()` runs on UPDATE to `orders`
+- Records: previous status, new status, who changed it, timestamp
+- Query example:
+```sql
+SELECT * FROM order_status_history 
+WHERE order_id = 'order-uuid' 
+ORDER BY created_at DESC;
+```
+
+---
+
+## Dashboard Routes
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/dashboard` | `DashboardHome` | Overview with real metrics |
+| `/dashboard/products` | `ProductsList` | Manage products |
+| `/dashboard/orders` | `OrdersList` | Manage orders |
+| `/dashboard/orders/:id` | `OrderDetails` | Order detail view |
+| `/dashboard/customers` | `CustomersList` | View customers |
+| `/dashboard/customers/:id` | `CustomerDetail` | Customer detail + order history |
+| `/dashboard/categories` | `CategoriesList` | Manage categories |
+| `/dashboard/discounts` | `DiscountsList` | Manage discounts |
+| `/dashboard/shipping` | `ShippingSettings` | Shipping zones & rates |
+| `/dashboard/extensions` | `ExtensionsList` | Store extensions |
+| `/dashboard/store-builder` | `StoreBuilder` | Visual page editor |
+| `/dashboard/settings` | `StoreSettings` | Store settings |
+| `/dashboard/profile` | `ProfilePage` | User profile |
 
 ---
 
