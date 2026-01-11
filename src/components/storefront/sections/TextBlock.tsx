@@ -1,3 +1,5 @@
+import { sanitizeHtml } from '@/lib/sanitize';
+
 interface TextBlockConfig {
   title?: string;
   content?: string;
@@ -22,6 +24,9 @@ export function TextBlock({ config }: TextBlockProps) {
     right: "text-right",
   }[alignment] || "text-center";
 
+  // Sanitize HTML content to prevent XSS attacks
+  const sanitizedContent = sanitizeHtml(content.replace(/\n/g, '<br />'));
+
   return (
     <section className="py-16 px-6 bg-background">
       <div className={`max-w-4xl mx-auto ${alignmentClass}`}>
@@ -33,7 +38,7 @@ export function TextBlock({ config }: TextBlockProps) {
         {content && (
           <div 
             className="prose prose-lg max-w-none text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
         )}
       </div>
