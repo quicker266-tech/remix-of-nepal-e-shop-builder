@@ -110,9 +110,12 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     try {
+      // Sanitize notes field to prevent XSS when displayed
+      const sanitizedNotes = validatedData.notes ? sanitizeHtml(validatedData.notes) : '';
+      
       console.log('🛒 [CHECKOUT] Starting checkout process...', {
         storeSlug,
-        email: formData.email,
+        email: validatedData.email,
         cartTotal,
         itemCount: items.length,
       });
@@ -141,11 +144,11 @@ export default function Checkout() {
       const { data: customerId, error: customerError } = await supabase
         .rpc('create_or_update_checkout_customer', {
           p_store_id: storeData.id,
-          p_email: formData.email,
-          p_full_name: formData.fullName,
-          p_phone: formData.phone,
-          p_address: formData.address,
-          p_city: formData.city,
+          p_email: validatedData.email,
+          p_full_name: validatedData.fullName,
+          p_phone: validatedData.phone,
+          p_address: validatedData.address,
+          p_city: validatedData.city,
         });
 
       if (customerError) {
@@ -162,10 +165,10 @@ export default function Checkout() {
       console.log('📦 [CHECKOUT] Step 3: Creating order...', { orderNumber: newOrderNumber });
 
       const shippingAddress = {
-        full_name: formData.fullName,
-        address: formData.address,
-        city: formData.city,
-        phone: formData.phone,
+        full_name: validatedData.fullName,
+        address: validatedData.address,
+        city: validatedData.city,
+        phone: validatedData.phone,
       };
 
       const { data: order, error: orderError } = await supabase
@@ -182,7 +185,7 @@ export default function Checkout() {
           total: orderTotal,
           shipping_address: shippingAddress as unknown as Json,
           billing_address: shippingAddress as unknown as Json,
-          notes: formData.notes || null,
+          notes: sanitizedNotes || null,
         })
         .select()
         .single();
@@ -376,10 +379,18 @@ export default function Checkout() {
                       <Input
                         id="fullName"
                         value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, fullName: e.target.value });
+                          if (formErrors.fullName) setFormErrors(prev => ({ ...prev, fullName: '' }));
+                        }}
                         placeholder="John Doe"
                         required
+                        maxLength={100}
+                        className={formErrors.fullName ? 'border-destructive' : ''}
                       />
+                      {formErrors.fullName && (
+                        <p className="text-sm text-destructive">{formErrors.fullName}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone *</Label>
@@ -387,10 +398,18 @@ export default function Checkout() {
                         id="phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, phone: e.target.value });
+                          if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: '' }));
+                        }}
                         placeholder="+977 98XXXXXXXX"
                         required
+                        maxLength={20}
+                        className={formErrors.phone ? 'border-destructive' : ''}
                       />
+                      {formErrors.phone && (
+                        <p className="text-sm text-destructive">{formErrors.phone}</p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -399,10 +418,18 @@ export default function Checkout() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (formErrors.email) setFormErrors(prev => ({ ...prev, email: '' }));
+                      }}
                       placeholder="john@example.com"
                       required
+                      maxLength={254}
+                      className={formErrors.email ? 'border-destructive' : ''}
                     />
+                    {formErrors.email && (
+                      <p className="text-sm text-destructive">{formErrors.email}</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -417,20 +444,36 @@ export default function Checkout() {
                     <Input
                       id="address"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value });
+                        if (formErrors.address) setFormErrors(prev => ({ ...prev, address: '' }));
+                      }}
                       placeholder="Thamel, Kathmandu"
                       required
+                      maxLength={200}
+                      className={formErrors.address ? 'border-destructive' : ''}
                     />
+                    {formErrors.address && (
+                      <p className="text-sm text-destructive">{formErrors.address}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="city">City *</Label>
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, city: e.target.value });
+                        if (formErrors.city) setFormErrors(prev => ({ ...prev, city: '' }));
+                      }}
                       placeholder="Kathmandu"
                       required
+                      maxLength={100}
+                      className={formErrors.city ? 'border-destructive' : ''}
                     />
+                    {formErrors.city && (
+                      <p className="text-sm text-destructive">{formErrors.city}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="notes">Order Notes (Optional)</Label>
@@ -440,7 +483,9 @@ export default function Checkout() {
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       placeholder="Any special instructions?"
                       rows={3}
+                      maxLength={500}
                     />
+                    <p className="text-xs text-muted-foreground">{formData.notes.length}/500 characters</p>
                   </div>
                 </CardContent>
               </Card>
