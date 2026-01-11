@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Search, MoreHorizontal, User, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, User, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import type { Tables } from '@/integrations/supabase/types';
 type Customer = Tables<'customers'>;
 
 export default function CustomersList() {
+  const navigate = useNavigate();
   const { currentStore } = useStore();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,7 +247,11 @@ export default function CustomersList() {
               </TableHeader>
               <TableBody>
                 {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
+                  <TableRow
+                    key={customer.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/dashboard/customers/${customer.id}`)}
+                  >
                     <TableCell>
                       <div>
                         <p className="font-medium">{customer.full_name || 'Unnamed'}</p>

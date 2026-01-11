@@ -34,6 +34,7 @@ import ProductDetail from "./pages/storefront/ProductDetail";
 import Cart from "./pages/storefront/Cart";
 import Checkout from "./pages/storefront/Checkout";
 import NotFound from "./pages/NotFound";
+import CustomerDetail from './pages/dashboard/customers/CustomerDetail';
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                   <Route path="settings" element={<StoreSettings />} />
                   <Route path="store-builder" element={<StoreBuilder />} />
                   <Route path="profile" element={<ProfilePage />} />
+                  <Route path="customers/:id" element={<CustomerDetail />} />
                 </Route>
                 
                 {/* Super Admin Dashboard */}

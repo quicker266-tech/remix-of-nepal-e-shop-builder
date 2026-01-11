@@ -1,41 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle, Truck } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
-interface ShippingZone {
-  id: string;
-  name: string;
-  rate: number;
-  cities: string[];
-}
-
-interface ShippingSettings {
-  enable_shipping: boolean;
-  free_shipping_threshold: number | null;
-  default_shipping_rate: number;
-  shipping_zones: ShippingZone[];
-}
-
 export default function Checkout() {
   const { storeSlug } = useParams();
   const navigate = useNavigate();
   const { items, cartTotal, clearCart } = useCart();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderComplete, setOrderComplete] = useState(false);
-  const [orderNumber, setOrderNumber] = useState('');
-  const [shippingSettings, setShippingSettings] = useState<ShippingSettings | null>(null);
-  const [shippingAmount, setShippingAmount] = useState(0);
-
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -44,89 +25,23 @@ export default function Checkout() {
     city: '',
     notes: '',
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
 
-  useEffect(() => {
-    if (storeSlug) {
-      fetchShippingSettings();
-    }
-  }, [storeSlug]);
-
-  useEffect(() => {
-    if (shippingSettings && formData.city) {
-      calculateShipping();
-    }
-  }, [shippingSettings, formData.city, cartTotal]);
-
-  const fetchShippingSettings = async () => {
-    try {
-      const { data: storeData } = await supabase
-        .from('stores')
-        .select('id')
-        .eq('slug', storeSlug)
-        .single();
-
-      if (!storeData) return;
-
-      const { data } = await supabase
-        .from('store_shipping_settings')
-        .select('*')
-        .eq('store_id', storeData.id)
-        .maybeSingle();
-
-      if (data) {
-        setShippingSettings({
-          enable_shipping: data.enable_shipping ?? true,
-          free_shipping_threshold: data.free_shipping_threshold,
-          default_shipping_rate: data.default_shipping_rate ?? 0,
-          shipping_zones: (data.shipping_zones as unknown as ShippingZone[]) || [],
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching shipping settings:', error);
-    }
-  };
-
-  const calculateShipping = () => {
-    if (!shippingSettings || !shippingSettings.enable_shipping) {
-      setShippingAmount(0);
-      return;
-    }
-
-    // Check free shipping threshold
-    if (shippingSettings.free_shipping_threshold && cartTotal >= shippingSettings.free_shipping_threshold) {
-      setShippingAmount(0);
-      return;
-    }
-
-    // Find matching zone
-    const customerCity = formData.city.toLowerCase().trim();
-    const matchingZone = shippingSettings.shipping_zones.find(zone =>
-      zone.cities.some(city => city.toLowerCase().trim() === customerCity)
-    );
-
-    if (matchingZone) {
-      setShippingAmount(matchingZone.rate);
-    } else {
-      setShippingAmount(shippingSettings.default_shipping_rate);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const shippingAmount = 100; // Fixed shipping for now
+  const orderTotal = cartTotal + shippingAmount;
 
   const generateOrderNumber = () => {
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
     return `ORD-${timestamp}-${random}`;
   };
 
-  const orderTotal = cartTotal + shippingAmount;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
       toast.error('Please fill in all required fields');
       return;
@@ -140,20 +55,34 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     try {
-      // Get store ID from slug
+      console.log('🛒 [CHECKOUT] Starting checkout process...', {
+        storeSlug,
+        email: formData.email,
+        cartTotal,
+        itemCount: items.length,
+      });
+
+      // ================================================================
+      // STEP 1: Get store ID from slug
+      // ================================================================
+      console.log('🏪 [CHECKOUT] Step 1: Fetching store...');
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('id')
+        .select('id, slug, name')
         .eq('slug', storeSlug)
         .single();
 
       if (storeError || !storeData) {
+        console.error('❌ [CHECKOUT] Store lookup failed:', storeError);
         throw new Error('Store not found');
       }
 
-      const newOrderNumber = generateOrderNumber();
+      console.log('✅ [CHECKOUT] Store found:', storeData);
 
-      // Create or update customer using secure RPC function
+      // ================================================================
+      // STEP 2: Create or update customer using RPC function
+      // ================================================================
+      console.log('👤 [CHECKOUT] Step 2: Creating/updating customer...');
       const { data: customerId, error: customerError } = await supabase
         .rpc('create_or_update_checkout_customer', {
           p_store_id: storeData.id,
@@ -164,21 +93,161 @@ export default function Checkout() {
           p_city: formData.city,
         });
 
-      if (customerError) throw customerError;
-      if (!customerId) throw new Error('Failed to create customer');
+      if (customerError) {
+        console.error('❌ [CHECKOUT] Customer creation failed:', customerError);
+        throw customerError;
+      }
+
+      console.log('✅ [CHECKOUT] Customer created/updated:', customerId);
+
+      // ================================================================
+      // STEP 3: Create order record
+      // ================================================================
+      const newOrderNumber = generateOrderNumber();
+      console.log('📦 [CHECKOUT] Step 3: Creating order...', { orderNumber: newOrderNumber });
+
+      const shippingAddress = {
+        full_name: formData.fullName,
+        address: formData.address,
+        city: formData.city,
+        phone: formData.phone,
+      };
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          store_id: storeData.id,
+          customer_id: customerId,
+          order_number: newOrderNumber,
+          status: 'pending',
+          subtotal: cartTotal,
+          shipping_amount: shippingAmount,
+          discount_amount: 0,
+          tax_amount: 0,
+          total: orderTotal,
+          shipping_address: shippingAddress as unknown as Json,
+          billing_address: shippingAddress as unknown as Json,
+          notes: formData.notes || null,
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('❌ [CHECKOUT] Order creation failed:', orderError);
+        console.error('Order error details:', {
+          message: orderError.message,
+          code: orderError.code,
+          details: orderError.details,
+          hint: orderError.hint,
+        });
+        throw orderError;
+      }
+
+      console.log('✅ [CHECKOUT] Order created:', {
+        id: order.id,
+        order_number: order.order_number,
+        total: order.total,
+      });
+
+      // ================================================================
+      // STEP 4: Create order items
+      // ================================================================
+      console.log('📋 [CHECKOUT] Step 4: Creating order items...', {
+        itemCount: items.length,
+      });
+
+      const orderItems = items.map((item) => ({
+        order_id: order.id,
+        product_id: item.productId,
+        variant_id: item.variantId || null,
+        product_name: item.name,
+        variant_name: item.variantName || null,
+        sku: null,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+      }));
+
+      console.log('📋 [CHECKOUT] Order items to insert:', orderItems);
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        console.error('❌ [CHECKOUT] Order items creation failed:', itemsError);
+        console.error('Items error details:', {
+          message: itemsError.message,
+          code: itemsError.code,
+          details: itemsError.details,
+          hint: itemsError.hint,
+        });
+        throw itemsError;
+      }
+
+      console.log('✅ [CHECKOUT] Order items created successfully');
+
+      // ================================================================
+      // STEP 5: Update customer stats (fixed increment logic)
+      // ================================================================
+      console.log('📊 [CHECKOUT] Step 5: Updating customer stats...');
+      
+      // First, get current customer stats
+      const { data: currentCustomer } = await supabase
+        .from('customers')
+        .select('total_orders, total_spent')
+        .eq('id', customerId)
+        .single();
+
+      // Now increment properly
+      const newTotalOrders = (currentCustomer?.total_orders || 0) + 1;
+      const newTotalSpent = (currentCustomer?.total_spent || 0) + orderTotal;
+
+      await supabase
+        .from('customers')
+        .update({
+          total_orders: newTotalOrders,
+          total_spent: newTotalSpent,
+        })
+        .eq('id', customerId);
+
+      console.log('✅ [CHECKOUT] Customer stats updated:', {
+        total_orders: newTotalOrders,
+        total_spent: newTotalSpent,
+      });
+
+      // ================================================================
+      // SUCCESS! Show order confirmation
+      // ================================================================
+      console.log('🎉 [CHECKOUT] Checkout complete!', {
+        order_id: order.id,
+        order_number: newOrderNumber,
+        total: orderTotal,
+      });
 
       setOrderNumber(newOrderNumber);
       setOrderComplete(true);
       clearCart();
       toast.success('Order placed successfully!');
+      
     } catch (error: any) {
-      console.error('Error creating order:', error);
-      toast.error(error.message || 'Failed to place order');
+      console.error('❌ [CHECKOUT] CHECKOUT FAILED:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        stack: error.stack,
+      });
+      toast.error(error.message || 'Failed to place order. Please check console for details.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ================================================================
+  // ORDER CONFIRMATION VIEW
+  // ================================================================
   if (orderComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -202,6 +271,9 @@ export default function Checkout() {
     );
   }
 
+  // ================================================================
+  // EMPTY CART VIEW
+  // ================================================================
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -215,6 +287,9 @@ export default function Checkout() {
     );
   }
 
+  // ================================================================
+  // CHECKOUT FORM VIEW
+  // ================================================================
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
@@ -240,27 +315,25 @@ export default function Checkout() {
                   <CardTitle>Contact Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full Name *</Label>
                       <Input
                         id="fullName"
-                        name="fullName"
-                        placeholder="John Doe"
                         value={formData.fullName}
-                        onChange={handleInputChange}
+                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        placeholder="John Doe"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="phone">Phone *</Label>
                       <Input
                         id="phone"
-                        name="phone"
                         type="tel"
-                        placeholder="+977 98XXXXXXXX"
                         value={formData.phone}
-                        onChange={handleInputChange}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="+977 98XXXXXXXX"
                         required
                       />
                     </div>
@@ -269,11 +342,10 @@ export default function Checkout() {
                     <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
-                      name="email"
                       type="email"
-                      placeholder="john@example.com"
                       value={formData.email}
-                      onChange={handleInputChange}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="john@example.com"
                       required
                     />
                   </div>
@@ -286,13 +358,12 @@ export default function Checkout() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
+                    <Label htmlFor="address">Street Address *</Label>
                     <Input
                       id="address"
-                      name="address"
-                      placeholder="Street address"
                       value={formData.address}
-                      onChange={handleInputChange}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Thamel, Kathmandu"
                       required
                     />
                   </div>
@@ -300,10 +371,9 @@ export default function Checkout() {
                     <Label htmlFor="city">City *</Label>
                     <Input
                       id="city"
-                      name="city"
-                      placeholder="Kathmandu"
                       value={formData.city}
-                      onChange={handleInputChange}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Kathmandu"
                       required
                     />
                   </div>
@@ -311,10 +381,9 @@ export default function Checkout() {
                     <Label htmlFor="notes">Order Notes (Optional)</Label>
                     <Textarea
                       id="notes"
-                      name="notes"
-                      placeholder="Special instructions for delivery..."
                       value={formData.notes}
-                      onChange={handleInputChange}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Any special instructions?"
                       rows={3}
                     />
                   </div>
@@ -329,60 +398,45 @@ export default function Checkout() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {item.name} {item.variantName && `(${item.variantName})`} × {item.quantity}
-                      </span>
-                      <span>रु {(item.price * item.quantity).toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <Separator />
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>रु {cartTotal.toLocaleString()}</span>
+                  <div className="space-y-2">
+                    {items.map((item) => (
+                      <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
+                        <span>
+                          {item.name} {item.variantName && `(${item.variantName})`} × {item.quantity}
+                        </span>
+                        <span>रु {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
                   
-                  {shippingSettings?.enable_shipping && (
+                  <Separator />
+                  
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Truck className="w-4 h-4" />
-                        Shipping
-                        {shippingAmount === 0 && shippingSettings.free_shipping_threshold && cartTotal >= shippingSettings.free_shipping_threshold && (
-                          <span className="text-xs text-success">(Free)</span>
-                        )}
-                      </span>
-                      <span>
-                        {shippingAmount > 0 ? `रु ${shippingAmount.toLocaleString()}` : 'Free'}
-                      </span>
+                      <span>Subtotal</span>
+                      <span>रु {cartTotal.toFixed(2)}</span>
                     </div>
-                  )}
-                  
-                  {shippingSettings?.free_shipping_threshold && cartTotal < shippingSettings.free_shipping_threshold && (
-                    <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                      Add रु {(shippingSettings.free_shipping_threshold - cartTotal).toLocaleString()} more for free shipping!
-                    </p>
-                  )}
+                    <div className="flex justify-between text-sm">
+                      <span>Shipping</span>
+                      <span>रु {shippingAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
                   
                   <Separator />
                   
-                  <div className="flex justify-between font-semibold">
+                  <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-primary">रु {orderTotal.toLocaleString()}</span>
+                    <span>रु {orderTotal.toFixed(2)}</span>
                   </div>
+
                   <Button 
                     type="submit" 
                     className="w-full" 
                     size="lg"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Place Order
+                    {isSubmitting ? 'Processing...' : 'Place Order'}
                   </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Payment: Cash on Delivery
-                  </p>
                 </CardContent>
               </Card>
             </div>
