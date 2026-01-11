@@ -242,6 +242,10 @@ $$;
 
 | Date | Version | Change | Severity | Files Affected |
 |------|---------|--------|----------|----------------|
+| 2026-01-11 | 1.1.0 | Fixed XSS in PreviewFrame (TextBlock & CustomHtml) | High | `src/components/store-builder/editor/PreviewFrame.tsx` |
+| 2026-01-11 | 1.1.0 | Restricted orders/order_items INSERT to authenticated users only | High | Database migration |
+| 2026-01-11 | 1.1.0 | Removed permissive customer INSERT policy (RPC only) | High | Database migration |
+| 2026-01-11 | 1.1.0 | Created public_stores view to hide sensitive owner data | Medium | Database migration |
 | 2026-01-11 | 1.0.0 | Created sanitize utility library | High | `src/lib/sanitize.ts` |
 | 2026-01-11 | 1.0.0 | Fixed TextBlock XSS vulnerability | High | `src/components/storefront/sections/TextBlock.tsx` |
 | 2026-01-11 | 1.0.0 | Added Zod validation to checkout | High | `src/pages/storefront/Checkout.tsx` |
@@ -301,9 +305,11 @@ $$;
 
 | Table | Public Read | Public Write | Tenant Access | Notes |
 |-------|-------------|--------------|---------------|-------|
-| `customers` | ❌ | INSERT only | Full CRUD | UPDATE restricted to owner |
-| `orders` | ❌ | INSERT only | Full CRUD | Via can_access_store() |
+| `customers` | ❌ | ❌ (RPC only) | Full CRUD | INSERT via `create_or_update_checkout_customer` RPC only |
+| `orders` | ❌ | AUTH INSERT | Full CRUD | Authenticated users can create orders |
+| `order_items` | ❌ | AUTH INSERT | Full CRUD | Authenticated users can create order items |
 | `products` | ✅ (active) | ❌ | Full CRUD | Public can view active store products |
+| `stores` | ✅ (active) | ❌ | Full CRUD | `public_stores` view hides sensitive owner data |
 | `user_roles` | ❌ | ❌ | Read own | Super admin pattern |
 | `store_extensions` | ❌ | ❌ | Full CRUD | Contains sensitive API keys |
 
@@ -507,6 +513,7 @@ We will respond within 48 hours and work to resolve the issue promptly.
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1.0 | 2026-01-11 | Security Team | Fixed XSS in PreviewFrame, hardened RLS policies, created public_stores view |
 | 1.0.0 | 2026-01-11 | Security Team | Initial documentation |
 
 ---
