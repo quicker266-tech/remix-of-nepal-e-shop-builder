@@ -66,6 +66,13 @@ export type Database = {
             foreignKeyName: "categories_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -118,6 +125,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customers_store_id_fkey"
             columns: ["store_id"]
@@ -177,6 +191,13 @@ export type Database = {
           used_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "discount_codes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "discount_codes_store_id_fkey"
             columns: ["store_id"]
@@ -352,6 +373,13 @@ export type Database = {
             foreignKeyName: "orders_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -406,6 +434,13 @@ export type Database = {
             columns: ["page_id"]
             isOneToOne: false
             referencedRelation: "store_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_sections_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
           {
@@ -600,6 +635,13 @@ export type Database = {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -668,6 +710,13 @@ export type Database = {
             foreignKeyName: "store_extensions_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_extensions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -702,6 +751,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "store_header_footer_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_header_footer_store_id_fkey"
             columns: ["store_id"]
@@ -773,6 +829,13 @@ export type Database = {
             foreignKeyName: "store_navigation_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_navigation_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -832,6 +895,13 @@ export type Database = {
             foreignKeyName: "store_pages_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_pages_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -873,6 +943,13 @@ export type Database = {
             foreignKeyName: "store_shipping_settings_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: true
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_shipping_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -901,6 +978,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "store_staff_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_staff_store_id_fkey"
             columns: ["store_id"]
@@ -948,6 +1032,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "store_themes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_themes_store_id_fkey"
             columns: ["store_id"]
@@ -1040,7 +1131,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_stores: {
+        Row: {
+          banner_url: string | null
+          business_category: string | null
+          business_type: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          logo_url: string | null
+          name: string | null
+          settings: Json | null
+          slug: string | null
+          status: Database["public"]["Enums"]["store_status"] | null
+        }
+        Insert: {
+          banner_url?: string | null
+          business_category?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          settings?: Json | null
+          slug?: string | null
+          status?: Database["public"]["Enums"]["store_status"] | null
+        }
+        Update: {
+          banner_url?: string | null
+          business_category?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          settings?: Json | null
+          slug?: string | null
+          status?: Database["public"]["Enums"]["store_status"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_store: {
