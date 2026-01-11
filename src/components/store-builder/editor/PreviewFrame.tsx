@@ -18,6 +18,7 @@
 
 import { PageSection, StoreTheme, SectionType, PageType } from '../types';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { SPACER_HEIGHTS, HERO_HEIGHTS } from '../constants';
 import { 
   ChevronLeft, ChevronRight, Play, Star, Quote, 
@@ -514,7 +515,7 @@ function TextBlockPreview({ config }: { config: Record<string, any> }) {
         maxWidth: maxWidths[config.maxWidth as keyof typeof maxWidths] || maxWidths.medium 
       }}
     >
-      <div dangerouslySetInnerHTML={{ __html: config.content || '<p>Text content here...</p>' }} />
+      <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.content || '<p>Text content here...</p>') }} />
     </div>
   );
 }
@@ -824,7 +825,7 @@ function CustomHtmlPreview({ config }: { config: Record<string, any> }) {
     <div className="p-8 bg-muted/30">
       <div className="border border-dashed border-muted-foreground/30 rounded-lg p-4">
         <p className="text-xs text-muted-foreground mb-2">Custom HTML</p>
-        <div dangerouslySetInnerHTML={{ __html: config.html || '<p>Custom content</p>' }} />
+        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.html || '<p>Custom content</p>') }} />
       </div>
     </div>
   );
