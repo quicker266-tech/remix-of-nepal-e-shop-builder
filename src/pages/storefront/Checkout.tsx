@@ -10,7 +10,41 @@ import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { z } from 'zod';
+import { sanitizeHtml } from '@/lib/sanitize';
 import type { Json } from '@/integrations/supabase/types';
+
+// Zod schema for checkout form validation
+const checkoutSchema = z.object({
+  fullName: z.string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters'),
+  email: z.string()
+    .trim()
+    .email('Invalid email address')
+    .max(254, 'Email must be less than 254 characters'),
+  phone: z.string()
+    .trim()
+    .min(7, 'Phone must be at least 7 characters')
+    .max(20, 'Phone must be less than 20 characters')
+    .regex(/^[+\d\s()-]+$/, 'Phone can only contain numbers, spaces, +, -, (, )'),
+  address: z.string()
+    .trim()
+    .min(5, 'Address must be at least 5 characters')
+    .max(200, 'Address must be less than 200 characters'),
+  city: z.string()
+    .trim()
+    .min(2, 'City must be at least 2 characters')
+    .max(100, 'City must be less than 100 characters'),
+  notes: z.string()
+    .trim()
+    .max(500, 'Notes must be less than 500 characters')
+    .optional()
+    .transform(val => val || ''),
+});
+
+type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function Checkout() {
   const { storeSlug } = useParams();
@@ -26,6 +60,7 @@ export default function Checkout() {
     notes: '',
   });
   
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
@@ -39,11 +74,31 @@ export default function Checkout() {
     return `ORD-${timestamp}-${random}`;
   };
 
+  const validateForm = (): CheckoutFormData | null => {
+    const result = checkoutSchema.safeParse(formData);
+    
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          errors[err.path[0] as string] = err.message;
+        }
+      });
+      setFormErrors(errors);
+      return null;
+    }
+    
+    setFormErrors({});
+    return result.data;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !formData.city) {
-      toast.error('Please fill in all required fields');
+    // Validate form with zod schema
+    const validatedData = validateForm();
+    if (!validatedData) {
+      toast.error('Please fix the form errors');
       return;
     }
 
