@@ -92,7 +92,7 @@ export function CategoryGrid({ config, storeId, storeSlug }: CategoryGridProps) 
             {categories.map((category) => (
               <Link
                 key={category.id}
-                to={`/store/${storeSlug}/page/categories?cat=${category.slug}`}
+                to={`/store/${storeSlug}/page/category?cat=${category.slug}`}
                 className="group relative aspect-square rounded-lg overflow-hidden bg-muted"
               >
                 {category.image_url ? (
