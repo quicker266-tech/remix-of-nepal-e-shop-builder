@@ -31,7 +31,8 @@ import StoreBuilder from "./components/store-builder/StoreBuilder";
 import CustomerDetail from './pages/dashboard/customers/CustomerDetail';
 import NotFound from "./pages/NotFound";
 
-// Storefront components (standalone pages)
+// Storefront layout and pages
+import StorefrontLayout from "./layouts/StorefrontLayout";
 import StorePage from "./pages/storefront/StorePage";
 import ProductDetail from "./pages/storefront/ProductDetail";
 import StoreCatalog from "./pages/storefront/StoreCatalog";
@@ -53,13 +54,15 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 
-                {/* Customer Storefront (standalone pages) */}
-                <Route path="/store/:storeSlug" element={<StorePage />} />
-                <Route path="/store/:storeSlug/page/:pageSlug" element={<StorePage />} />
-                <Route path="/store/:storeSlug/catalog" element={<StoreCatalog />} />
-                <Route path="/store/:storeSlug/product/:productSlug" element={<ProductDetail />} />
-                <Route path="/store/:storeSlug/cart" element={<Cart />} />
-                <Route path="/store/:storeSlug/checkout" element={<Checkout />} />
+                {/* Customer Storefront (with shared layout) */}
+                <Route path="/store/:storeSlug" element={<StorefrontLayout />}>
+                  <Route index element={<StorePage />} />
+                  <Route path="page/:pageSlug" element={<StorePage />} />
+                  <Route path="catalog" element={<StoreCatalog />} />
+                  <Route path="product/:productSlug" element={<ProductDetail />} />
+                  <Route path="cart" element={<Cart />} />
+                  <Route path="checkout" element={<Checkout />} />
+                </Route>
                 
                 {/* Tenant Dashboard */}
                 <Route path="/dashboard" element={<DashboardLayout />}>
