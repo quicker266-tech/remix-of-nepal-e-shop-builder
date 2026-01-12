@@ -6,17 +6,18 @@
  * Public-facing product catalog for a store.
  * Displays products with search, category filtering, and shopping cart.
  * 
+ * NOTE: Header/Footer are now rendered by StorefrontLayout (parent)
+ * This component receives store data via useStorefrontContext()
+ * 
  * ARCHITECTURE:
- * - Fetches store by slug from URL
+ * - Uses store from context (no need to fetch store)
  * - Loads products and categories for the store
  * - Client-side filtering for search and categories
  * - Featured products displayed separately
  * - Responsive grid layout for product cards
  * 
  * URL STRUCTURE:
- * /store/:storeSlug - Main catalog page
- * /store/:storeSlug/product/:productSlug - Product detail
- * /store/:storeSlug/cart - Shopping cart
+ * /store/:storeSlug/catalog - Catalog page
  * 
  * FEATURES:
  * - Search products by name/description
@@ -30,7 +31,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Search, Filter, ShoppingCart, Store as StoreIcon } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,18 +40,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/contexts/CartContext';
+import { useStorefrontContext } from '@/components/storefront/StorefrontLayout';
 
-type Store = Tables<'stores'>;
 type Product = Tables<'products'>;
 type Category = Tables<'categories'>;
 
 export default function StoreCatalog() {
-  // Get store slug from URL parameters
+  // Get store from context (already fetched by StorefrontLayout)
   const { storeSlug } = useParams();
+  const { store } = useStorefrontContext();
   const { cartItemCount } = useCart();
   
   // Data state
-  const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,64 +60,43 @@ export default function StoreCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Fetch store data when component mounts or slug changes
+  // Fetch products and categories when store is available
   useEffect(() => {
-    if (storeSlug) {
-      fetchStoreData();
+    if (store) {
+      fetchProductsAndCategories();
     }
-  }, [storeSlug]);
+  }, [store]);
 
   /**
-   * Fetch all data for the store page
-   * Loads store info, products, and categories in parallel
+   * Fetch products and categories for the store
+   * Store is already available from context
    */
-  const fetchStoreData = async () => {
+  const fetchProductsAndCategories = async () => {
+    if (!store) return;
+
     try {
-      // ================================================================
-      // STEP 1: Fetch store by slug
-      // Only active stores are publicly accessible
-      // ================================================================
-      const { data: storeData, error: storeError } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('slug', storeSlug)
-        .eq('status', 'active')
-        .maybeSingle();
+      setLoading(true);
 
-      if (storeError) throw storeError;
-
-      // Store not found or not active
-      if (!storeData) {
-        setStore(null);
-        setLoading(false);
-        return;
-      }
-
-      setStore(storeData);
-
-      // ================================================================
-      // STEP 2: Fetch products and categories in parallel
-      // Only active products are shown to customers
-      // ================================================================
+      // Fetch products and categories in parallel
       const [productsResult, categoriesResult] = await Promise.all([
         supabase
           .from('products')
           .select('*')
-          .eq('store_id', storeData.id)
+          .eq('store_id', store.id)
           .eq('status', 'active')
           .order('featured', { ascending: false }) // Featured products first
           .order('created_at', { ascending: false }), // Then by newest
         supabase
           .from('categories')
           .select('*')
-          .eq('store_id', storeData.id)
+          .eq('store_id', store.id)
           .order('sort_order'),
       ]);
 
       if (productsResult.data) setProducts(productsResult.data);
       if (categoriesResult.data) setCategories(categoriesResult.data);
     } catch (error) {
-      console.error('Error fetching store:', error);
+      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
@@ -164,56 +144,22 @@ export default function StoreCatalog() {
     );
   }
 
-  // ================================================================
-  // STORE NOT FOUND STATE
-  // ================================================================
-
-  if (!store) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <StoreIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2">Store Not Found</h1>
-          <p className="text-muted-foreground mb-4">
-            This store doesn't exist or is no longer active.
-          </p>
-          <Link to="/">
-            <Button>Go to Homepage</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // Note: Store not found is already handled by parent StorefrontLayout
 
   // ================================================================
   // MAIN RENDER
   // ================================================================
 
+  // Note: Header/Footer are rendered by parent StorefrontLayout
   return (
     <div className="min-h-screen bg-background">
       {/* ============================================================
-       * HEADER: Store logo, search bar, cart button
-       * Sticky header for easy access while scrolling
+       * SEARCH AND FILTER BAR
+       * Since header is in layout, we just need search here
        * ============================================================ */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      <div className="border-b bg-background/95 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
-            {/* Store logo and name */}
-            <Link to={`/store/${storeSlug}`} className="flex items-center gap-3">
-              {store.logo_url ? (
-                <img 
-                  src={store.logo_url} 
-                  alt={store.name} 
-                  className="w-10 h-10 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <StoreIcon className="w-5 h-5 text-primary" />
-                </div>
-              )}
-              <span className="font-bold text-lg hidden sm:block">{store.name}</span>
-            </Link>
-
             {/* Search input */}
             <div className="flex-1 max-w-md">
               <div className="relative">
@@ -240,38 +186,13 @@ export default function StoreCatalog() {
             </Link>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* ============================================================
-       * BANNER: Store banner image with gradient overlay
-       * Falls back to simple header if no banner
-       * ============================================================ */}
-      {store.banner_url && (
-        <div className="relative h-48 md:h-64">
-          <img 
-            src={store.banner_url} 
-            alt={store.name} 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-          <div className="absolute bottom-4 left-4 right-4 max-w-7xl mx-auto px-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">{store.name}</h1>
-            {store.description && (
-              <p className="text-muted-foreground mt-1 line-clamp-2">{store.description}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Fallback header without banner */}
-      {!store.banner_url && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold">{store.name}</h1>
-          {store.description && (
-            <p className="text-muted-foreground mt-1">{store.description}</p>
-          )}
-        </div>
-      )}
+      {/* Page title */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <h1 className="text-2xl font-bold">Product Catalog</h1>
+        <p className="text-muted-foreground mt-1">Browse all products from {store.name}</p>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* ============================================================
