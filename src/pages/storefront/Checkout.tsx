@@ -11,7 +11,7 @@ import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { sanitizeHtml } from '@/lib/sanitize';
+//import { sanitizeHtml } from '@/lib/sanitize';
 import type { Json } from '@/integrations/supabase/types';
 
 // Zod schema for checkout form validation
