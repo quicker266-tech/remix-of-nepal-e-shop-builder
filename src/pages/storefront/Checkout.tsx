@@ -1,22 +1,3 @@
-/**
- * ============================================================================
- * CHECKOUT PAGE
- * ============================================================================
- *
- * Handles the checkout process for customer orders.
- * Filters cart items by storeSlug to only checkout items from this store.
- *
- * NOTE: Header/Footer are now rendered by StorefrontLayout (parent)
- * This component receives store data via useStorefrontContext()
- *
- * SECURITY:
- * - Form validation with Zod schema
- * - HTML sanitization for notes field
- * - Input length limits
- *
- * ============================================================================
- */
-
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -27,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
-import { useStorefrontContext } from '@/components/storefront/StorefrontLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -69,15 +49,8 @@ type CheckoutFormData = z.infer<typeof checkoutSchema>;
 export default function Checkout() {
   const { storeSlug } = useParams();
   const navigate = useNavigate();
-  const { store } = useStorefrontContext();
-  const { items, clearCart } = useCart();
-
-  // Filter items for current store only
-  const storeItems = items.filter(item => item.storeSlug === storeSlug);
-
-  // Calculate totals for this store's items only
-  const cartTotal = storeItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
+  const { items, cartTotal, clearCart } = useCart();
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -86,7 +59,7 @@ export default function Checkout() {
     city: '',
     notes: '',
   });
-
+  
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -103,7 +76,7 @@ export default function Checkout() {
 
   const validateForm = (): CheckoutFormData | null => {
     const result = checkoutSchema.safeParse(formData);
-
+    
     if (!result.success) {
       const errors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
@@ -114,14 +87,14 @@ export default function Checkout() {
       setFormErrors(errors);
       return null;
     }
-
+    
     setFormErrors({});
     return result.data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     // Validate form with zod schema
     const validatedData = validateForm();
     if (!validatedData) {
@@ -129,13 +102,8 @@ export default function Checkout() {
       return;
     }
 
-    if (storeItems.length === 0) {
+    if (items.length === 0) {
       toast.error('Your cart is empty');
-      return;
-    }
-
-    if (!store) {
-      toast.error('Store not found');
       return;
     }
 
@@ -144,22 +112,38 @@ export default function Checkout() {
     try {
       // Sanitize notes field to prevent XSS when displayed
       const sanitizedNotes = validatedData.notes ? sanitizeHtml(validatedData.notes) : '';
-
+      
       console.log('🛒 [CHECKOUT] Starting checkout process...', {
         storeSlug,
-        storeId: store.id,
         email: validatedData.email,
         cartTotal,
-        itemCount: storeItems.length,
+        itemCount: items.length,
       });
 
       // ================================================================
-      // STEP 1: Create or update customer using RPC function
+      // STEP 1: Get store ID from slug
       // ================================================================
-      console.log('👤 [CHECKOUT] Step 1: Creating/updating customer...');
+      console.log('🏪 [CHECKOUT] Step 1: Fetching store...');
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .select('id, slug, name')
+        .eq('slug', storeSlug)
+        .single();
+
+      if (storeError || !storeData) {
+        console.error('❌ [CHECKOUT] Store lookup failed:', storeError);
+        throw new Error('Store not found');
+      }
+
+      console.log('✅ [CHECKOUT] Store found:', storeData);
+
+      // ================================================================
+      // STEP 2: Create or update customer using RPC function
+      // ================================================================
+      console.log('👤 [CHECKOUT] Step 2: Creating/updating customer...');
       const { data: customerId, error: customerError } = await supabase
         .rpc('create_or_update_checkout_customer', {
-          p_store_id: store.id,
+          p_store_id: storeData.id,
           p_email: validatedData.email,
           p_full_name: validatedData.fullName,
           p_phone: validatedData.phone,
@@ -175,10 +159,10 @@ export default function Checkout() {
       console.log('✅ [CHECKOUT] Customer created/updated:', customerId);
 
       // ================================================================
-      // STEP 2: Create order record
+      // STEP 3: Create order record
       // ================================================================
       const newOrderNumber = generateOrderNumber();
-      console.log('📦 [CHECKOUT] Step 2: Creating order...', { orderNumber: newOrderNumber });
+      console.log('📦 [CHECKOUT] Step 3: Creating order...', { orderNumber: newOrderNumber });
 
       const shippingAddress = {
         full_name: validatedData.fullName,
@@ -190,7 +174,7 @@ export default function Checkout() {
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          store_id: store.id,
+          store_id: storeData.id,
           customer_id: customerId,
           order_number: newOrderNumber,
           status: 'pending',
@@ -208,6 +192,12 @@ export default function Checkout() {
 
       if (orderError) {
         console.error('❌ [CHECKOUT] Order creation failed:', orderError);
+        console.error('Order error details:', {
+          message: orderError.message,
+          code: orderError.code,
+          details: orderError.details,
+          hint: orderError.hint,
+        });
         throw orderError;
       }
 
@@ -218,13 +208,13 @@ export default function Checkout() {
       });
 
       // ================================================================
-      // STEP 3: Create order items
+      // STEP 4: Create order items
       // ================================================================
-      console.log('📋 [CHECKOUT] Step 3: Creating order items...', {
-        itemCount: storeItems.length,
+      console.log('📋 [CHECKOUT] Step 4: Creating order items...', {
+        itemCount: items.length,
       });
 
-      const orderItems = storeItems.map((item) => ({
+      const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.productId,
         variant_id: item.variantId || null,
@@ -236,22 +226,30 @@ export default function Checkout() {
         total_price: item.price * item.quantity,
       }));
 
+      console.log('📋 [CHECKOUT] Order items to insert:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (itemsError) {
         console.error('❌ [CHECKOUT] Order items creation failed:', itemsError);
+        console.error('Items error details:', {
+          message: itemsError.message,
+          code: itemsError.code,
+          details: itemsError.details,
+          hint: itemsError.hint,
+        });
         throw itemsError;
       }
 
       console.log('✅ [CHECKOUT] Order items created successfully');
 
       // ================================================================
-      // STEP 4: Update customer stats (fixed increment logic)
+      // STEP 5: Update customer stats (fixed increment logic)
       // ================================================================
-      console.log('📊 [CHECKOUT] Step 4: Updating customer stats...');
-
+      console.log('📊 [CHECKOUT] Step 5: Updating customer stats...');
+      
       // First, get current customer stats
       const { data: currentCustomer } = await supabase
         .from('customers')
@@ -289,10 +287,17 @@ export default function Checkout() {
       setOrderComplete(true);
       clearCart();
       toast.success('Order placed successfully!');
-
+      
     } catch (error: any) {
       console.error('❌ [CHECKOUT] CHECKOUT FAILED:', error);
-      toast.error(error.message || 'Failed to place order. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        stack: error.stack,
+      });
+      toast.error(error.message || 'Failed to place order. Please check console for details.');
     } finally {
       setIsSubmitting(false);
     }
@@ -303,10 +308,10 @@ export default function Checkout() {
   // ================================================================
   if (orderComplete) {
     return (
-      <div className="max-w-md mx-auto px-4 py-16">
-        <Card>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
+            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-success" />
             <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
             <p className="text-muted-foreground mb-4">
               Thank you for your order. We'll contact you shortly.
@@ -315,7 +320,7 @@ export default function Checkout() {
               <p className="text-sm text-muted-foreground">Order Number</p>
               <p className="text-xl font-mono font-bold">{orderNumber}</p>
             </div>
-            <Link to={`/store/${storeSlug}/catalog`}>
+            <Link to={`/store/${storeSlug}`}>
               <Button className="w-full">Continue Shopping</Button>
             </Link>
           </CardContent>
@@ -327,14 +332,13 @@ export default function Checkout() {
   // ================================================================
   // EMPTY CART VIEW
   // ================================================================
-  if (storeItems.length === 0) {
+  if (items.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-xl font-bold mb-2">Your cart is empty</h1>
-          <p className="text-muted-foreground mb-4">Add some products before checkout</p>
-          <Link to={`/store/${storeSlug}/catalog`}>
-            <Button>Browse Products</Button>
+          <Link to={`/store/${storeSlug}`}>
+            <Button>Back to Store</Button>
           </Link>
         </div>
       </div>
@@ -345,193 +349,200 @@ export default function Checkout() {
   // CHECKOUT FORM VIEW
   // ================================================================
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Back Navigation */}
-      <Link to={`/store/${storeSlug}/cart`} className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Cart
-      </Link>
-
-      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-
-      <form onSubmit={handleSubmit}>
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Customer Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      value={formData.fullName}
-                      onChange={(e) => {
-                        setFormData({ ...formData, fullName: e.target.value });
-                        if (formErrors.fullName) setFormErrors(prev => ({ ...prev, fullName: '' }));
-                      }}
-                      placeholder="John Doe"
-                      required
-                      maxLength={100}
-                      className={formErrors.fullName ? 'border-destructive' : ''}
-                    />
-                    {formErrors.fullName && (
-                      <p className="text-sm text-destructive">{formErrors.fullName}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone *</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => {
-                        setFormData({ ...formData, phone: e.target.value });
-                        if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: '' }));
-                      }}
-                      placeholder="+977 98XXXXXXXX"
-                      required
-                      maxLength={20}
-                      className={formErrors.phone ? 'border-destructive' : ''}
-                    />
-                    {formErrors.phone && (
-                      <p className="text-sm text-destructive">{formErrors.phone}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      if (formErrors.email) setFormErrors(prev => ({ ...prev, email: '' }));
-                    }}
-                    placeholder="john@example.com"
-                    required
-                    maxLength={254}
-                    className={formErrors.email ? 'border-destructive' : ''}
-                  />
-                  {formErrors.email && (
-                    <p className="text-sm text-destructive">{formErrors.email}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Address</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Street Address *</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => {
-                      setFormData({ ...formData, address: e.target.value });
-                      if (formErrors.address) setFormErrors(prev => ({ ...prev, address: '' }));
-                    }}
-                    placeholder="Thamel, Kathmandu"
-                    required
-                    maxLength={200}
-                    className={formErrors.address ? 'border-destructive' : ''}
-                  />
-                  {formErrors.address && (
-                    <p className="text-sm text-destructive">{formErrors.address}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => {
-                      setFormData({ ...formData, city: e.target.value });
-                      if (formErrors.city) setFormErrors(prev => ({ ...prev, city: '' }));
-                    }}
-                    placeholder="Kathmandu"
-                    required
-                    maxLength={100}
-                    className={formErrors.city ? 'border-destructive' : ''}
-                  />
-                  {formErrors.city && (
-                    <p className="text-sm text-destructive">{formErrors.city}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Order Notes (Optional)</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Any special instructions?"
-                    rows={3}
-                    maxLength={500}
-                  />
-                  <p className="text-xs text-muted-foreground">{formData.notes.length}/500 characters</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  {storeItems.map((item) => (
-                    <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
-                      <span>
-                        {item.name} {item.variantName && `(${item.variantName})`} × {item.quantity}
-                      </span>
-                      <span>रु {(item.price * item.quantity).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
-                    <span>रु {cartTotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Shipping</span>
-                    <span>रु {shippingAmount.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>रु {orderTotal.toLocaleString()}</span>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Processing...' : 'Place Order'}
-                </Button>
-              </CardContent>
-            </Card>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Link to={`/store/${storeSlug}/cart`}>
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <h1 className="font-semibold">Checkout</h1>
           </div>
         </div>
-      </form>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <form onSubmit={handleSubmit}>
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Customer Info */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name *</Label>
+                      <Input
+                        id="fullName"
+                        value={formData.fullName}
+                        onChange={(e) => {
+                          setFormData({ ...formData, fullName: e.target.value });
+                          if (formErrors.fullName) setFormErrors(prev => ({ ...prev, fullName: '' }));
+                        }}
+                        placeholder="John Doe"
+                        required
+                        maxLength={100}
+                        className={formErrors.fullName ? 'border-destructive' : ''}
+                      />
+                      {formErrors.fullName && (
+                        <p className="text-sm text-destructive">{formErrors.fullName}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone *</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => {
+                          setFormData({ ...formData, phone: e.target.value });
+                          if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: '' }));
+                        }}
+                        placeholder="+977 98XXXXXXXX"
+                        required
+                        maxLength={20}
+                        className={formErrors.phone ? 'border-destructive' : ''}
+                      />
+                      {formErrors.phone && (
+                        <p className="text-sm text-destructive">{formErrors.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (formErrors.email) setFormErrors(prev => ({ ...prev, email: '' }));
+                      }}
+                      placeholder="john@example.com"
+                      required
+                      maxLength={254}
+                      className={formErrors.email ? 'border-destructive' : ''}
+                    />
+                    {formErrors.email && (
+                      <p className="text-sm text-destructive">{formErrors.email}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Shipping Address</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Street Address *</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value });
+                        if (formErrors.address) setFormErrors(prev => ({ ...prev, address: '' }));
+                      }}
+                      placeholder="Thamel, Kathmandu"
+                      required
+                      maxLength={200}
+                      className={formErrors.address ? 'border-destructive' : ''}
+                    />
+                    {formErrors.address && (
+                      <p className="text-sm text-destructive">{formErrors.address}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City *</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => {
+                        setFormData({ ...formData, city: e.target.value });
+                        if (formErrors.city) setFormErrors(prev => ({ ...prev, city: '' }));
+                      }}
+                      placeholder="Kathmandu"
+                      required
+                      maxLength={100}
+                      className={formErrors.city ? 'border-destructive' : ''}
+                    />
+                    {formErrors.city && (
+                      <p className="text-sm text-destructive">{formErrors.city}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Order Notes (Optional)</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Any special instructions?"
+                      rows={3}
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground">{formData.notes.length}/500 characters</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <Card className="sticky top-24">
+                <CardHeader>
+                  <CardTitle>Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {items.map((item) => (
+                      <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
+                        <span>
+                          {item.name} {item.variantName && `(${item.variantName})`} × {item.quantity}
+                        </span>
+                        <span>रु {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal</span>
+                      <span>रु {cartTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Shipping</span>
+                      <span>रु {shippingAmount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total</span>
+                    <span>रु {orderTotal.toFixed(2)}</span>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Processing...' : 'Place Order'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
