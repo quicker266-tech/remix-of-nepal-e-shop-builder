@@ -13,8 +13,7 @@ import { StarRating } from './StarRating';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Review {
@@ -23,7 +22,6 @@ interface Review {
   rating: number;
   title: string | null;
   content: string | null;
-  is_verified_purchase: boolean;
   created_at: string;
 }
 
@@ -49,7 +47,7 @@ export function ReviewList({ productId, pageSize = 5 }: ReviewListProps) {
 
       const { data, error, count } = await supabase
         .from('product_reviews')
-        .select('id, customer_name, rating, title, content, is_verified_purchase, created_at', { count: 'exact' })
+        .select('id, customer_name, rating, title, content, created_at', { count: 'exact' })
         .eq('product_id', productId)
         .eq('is_approved', true)
         .order('created_at', { ascending: false })
@@ -108,12 +106,6 @@ export function ReviewList({ productId, pageSize = 5 }: ReviewListProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{review.customer_name}</span>
-                {review.is_verified_purchase && (
-                  <Badge variant="secondary" className="text-xs">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Verified Purchase
-                  </Badge>
-                )}
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <StarRating rating={review.rating} size="sm" />

@@ -57,6 +57,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface CartItem {
   productId: string;
   variantId: string | null;
+  storeSlug: string;
   name: string;
   variantName: string | null;
   price: number;
