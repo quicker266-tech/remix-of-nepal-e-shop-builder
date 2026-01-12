@@ -31,8 +31,12 @@ import StoreBuilder from "./components/store-builder/StoreBuilder";
 import CustomerDetail from './pages/dashboard/customers/CustomerDetail';
 import NotFound from "./pages/NotFound";
 
-// Storefront components (nested under StorefrontLayout)
-
+// Storefront components (standalone pages)
+import StorePage from "./pages/storefront/StorePage";
+import ProductDetail from "./pages/storefront/ProductDetail";
+import StoreCatalog from "./pages/storefront/StoreCatalog";
+import Cart from "./pages/storefront/Cart";
+import Checkout from "./pages/storefront/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -49,8 +53,13 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 
-                
-            
+                {/* Customer Storefront (standalone pages) */}
+                <Route path="/store/:storeSlug" element={<StorePage />} />
+                <Route path="/store/:storeSlug/page/:pageSlug" element={<StorePage />} />
+                <Route path="/store/:storeSlug/catalog" element={<StoreCatalog />} />
+                <Route path="/store/:storeSlug/product/:productSlug" element={<ProductDetail />} />
+                <Route path="/store/:storeSlug/cart" element={<Cart />} />
+                <Route path="/store/:storeSlug/checkout" element={<Checkout />} />
                 
                 {/* Tenant Dashboard */}
                 <Route path="/dashboard" element={<DashboardLayout />}>

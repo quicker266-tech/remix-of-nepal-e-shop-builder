@@ -18,7 +18,7 @@
 
 import { PageSection, StoreTheme, SectionType, PageType } from '../types';
 import { cn } from '@/lib/utils';
-//import { sanitizeHtml } from '@/lib/sanitize';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { SPACER_HEIGHTS, HERO_HEIGHTS } from '../constants';
 import { 
   ChevronLeft, ChevronRight, Play, Star, Quote, 

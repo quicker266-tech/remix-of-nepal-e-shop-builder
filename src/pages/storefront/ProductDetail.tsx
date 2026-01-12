@@ -101,6 +101,7 @@ export default function ProductDetail() {
     if (!product) return;
 
     addToCart({
+      storeSlug: storeSlug!,
       productId: product.id,
       variantId: selectedVariant?.id || null,
       name: product.name,
