@@ -92,7 +92,7 @@ export default function CreateStore() {
           description: values.description || null,
           logo_url: values.logo_url || null,
           owner_id: user.id,
-          status: 'active',
+          status: 'pending',
         })
         .select()
         .single();
