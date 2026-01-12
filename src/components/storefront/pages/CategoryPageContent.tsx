@@ -136,7 +136,7 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
           </Link>
           <ChevronRight className="w-4 h-4" />
           <Link 
-            to={`/store/${storeSlug}/page/categories`} 
+            to={`/store/${storeSlug}/page/category`} 
             className="hover:text-foreground transition-colors"
           >
             Categories
@@ -213,7 +213,7 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
         ) : (
           <div className="text-center py-16">
             <p className="text-muted-foreground">No products found in this category.</p>
-            <Link to={`/store/${storeSlug}/page/categories`}>
+            <Link to={`/store/${storeSlug}/page/category`}>
               <Button variant="link" className="mt-2">Browse all categories</Button>
             </Link>
           </div>
@@ -229,7 +229,7 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
                 .map((category) => (
                   <Link
                     key={category.id}
-                    to={`/store/${storeSlug}/page/categories?cat=${category.slug}`}
+                    to={`/store/${storeSlug}/page/category?cat=${category.slug}`}
                   >
                     <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
                       {category.name}
@@ -289,7 +289,7 @@ interface CategoryCardProps {
 
 function CategoryCard({ category, storeSlug }: CategoryCardProps) {
   return (
-    <Link to={`/store/${storeSlug}/page/categories?cat=${category.slug}`}>
+    <Link to={`/store/${storeSlug}/page/category?cat=${category.slug}`}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="aspect-square relative overflow-hidden bg-muted">
           {category.image_url ? (
