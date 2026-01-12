@@ -138,20 +138,28 @@ export default function StorefrontLayout() {
           });
         }
 
-        // 3. Fetch header/footer config
+        // 3. Fetch header/footer config (create default if not exists)
         const { data: headerFooterData } = await supabase
           .from("store_header_footer")
           .select("header_config, footer_config, social_links")
           .eq("store_id", storeData.id)
           .single();
 
-        if (headerFooterData) {
-          setHeaderFooter({
-            header_config: (headerFooterData.header_config as HeaderFooterConfig['header_config']) || {},
-            footer_config: (headerFooterData.footer_config as HeaderFooterConfig['footer_config']) || {},
-            social_links: (headerFooterData.social_links as HeaderFooterConfig['social_links']) || {},
-          });
-        }
+        // Use fetched config or defaults
+        setHeaderFooter({
+          header_config: (headerFooterData?.header_config as HeaderFooterConfig['header_config']) || {
+            layout: 'logo-left',
+            sticky: true,
+            showSearch: true,
+            showCart: true,
+          },
+          footer_config: (headerFooterData?.footer_config as HeaderFooterConfig['footer_config']) || {
+            layout: 'simple',
+            showSocialLinks: false,
+            copyrightText: `© ${new Date().getFullYear()} ${storeData.name}`,
+          },
+          social_links: (headerFooterData?.social_links as HeaderFooterConfig['social_links']) || {},
+        });
 
         // 4. Fetch navigation items
         const { data: navData } = await supabase
