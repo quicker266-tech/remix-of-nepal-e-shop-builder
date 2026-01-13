@@ -638,9 +638,28 @@ export function useStoreNavigation(storeId: string | undefined) {
     }
   };
 
+  const reorderNavItems = async (items: NavItem[]) => {
+    // Optimistic update
+    setNavItems(items);
+
+    try {
+      for (let i = 0; i < items.length; i++) {
+        await supabase
+          .from('store_navigation')
+          .update({ sort_order: i })
+          .eq('id', items[i].id);
+      }
+      toast({ title: 'Navigation order updated' });
+    } catch (error) {
+      console.error('Error reordering nav items:', error);
+      toast({ title: 'Error reordering navigation', variant: 'destructive' });
+      fetchNavigation(); // Revert on error
+    }
+  };
+
   useEffect(() => {
     fetchNavigation();
   }, [fetchNavigation]);
 
-  return { navItems, loading, addNavItem, updateNavItem, deleteNavItem, refetch: fetchNavigation };
+  return { navItems, loading, addNavItem, updateNavItem, deleteNavItem, reorderNavItems, refetch: fetchNavigation };
 }
