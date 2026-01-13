@@ -50,6 +50,8 @@ export function StoreBuilder() {
   const { currentStore } = useStore();
   const { pages, loading: pagesLoading, createPage, updatePage, deletePage } = useStorePages(currentStore?.id);
   const { theme, loading: themeLoading, updateTheme } = useStoreTheme(currentStore?.id);
+  const { config: headerFooterConfig, loading: headerFooterLoading, updateConfig: updateHeaderFooter } = useStoreHeaderFooter(currentStore?.id);
+  const { navItems, loading: navLoading, addNavItem, updateNavItem, deleteNavItem, reorderNavItems } = useStoreNavigation(currentStore?.id);
   
   // ==========================================================================
   // LOCAL EDITOR STATE
@@ -222,17 +224,97 @@ export function StoreBuilder() {
             </TabsContent>
 
             <TabsContent value="settings" className="flex-1 overflow-auto m-0">
-              {activePage ? (
-                <PageSettings
-                  page={activePage}
-                  sectionCount={sections.length}
-                  onUpdate={updatePage}
-                />
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <p className="text-sm">Select a page to edit settings</p>
-                </div>
-              )}
+              <div className="p-4 space-y-4">
+                {/* Page Settings */}
+                {activePage && (
+                  <PageSettings
+                    page={activePage}
+                    sectionCount={sections.length}
+                    onUpdate={updatePage}
+                  />
+                )}
+
+                <Separator />
+
+                {/* Header & Footer Configuration */}
+                <Accordion type="multiple" defaultValue={['header-footer']} className="w-full">
+                  <AccordionItem value="header-footer">
+                    <AccordionTrigger className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <Layout className="h-4 w-4" />
+                        Header & Footer Appearance
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {headerFooterLoading ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      ) : (
+                        <HeaderFooterEditor
+                          storeId={currentStore.id}
+                          config={headerFooterConfig}
+                          onUpdate={updateHeaderFooter}
+                        />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="header-nav">
+                    <AccordionTrigger className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <Menu className="h-4 w-4" />
+                        Header Navigation
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {navLoading ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      ) : (
+                        <NavigationEditor
+                          storeId={currentStore.id}
+                          navItems={navItems.filter(n => n.location === 'header')}
+                          pages={pages}
+                          location="header"
+                          onAdd={addNavItem}
+                          onUpdate={updateNavItem}
+                          onDelete={deleteNavItem}
+                          onReorder={reorderNavItems}
+                        />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="footer-nav">
+                    <AccordionTrigger className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <LinkIcon className="h-4 w-4" />
+                        Footer Links
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {navLoading ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </div>
+                      ) : (
+                        <NavigationEditor
+                          storeId={currentStore.id}
+                          navItems={navItems.filter(n => n.location === 'footer')}
+                          pages={pages}
+                          location="footer"
+                          onAdd={addNavItem}
+                          onUpdate={updateNavItem}
+                          onDelete={deleteNavItem}
+                          onReorder={reorderNavItems}
+                        />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
             </TabsContent>
           </Tabs>
         </aside>
