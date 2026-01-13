@@ -67,14 +67,37 @@ Allow store owners to visually customize their storefront without coding.
 StoreBuilder (main container)
 ├── EditorHeader (preview controls)
 ├── Left Sidebar
-│   ├── SectionPalette (add sections)
+│   ├── SectionPalette (add sections, filtered by page permissions)
 │   ├── SectionList (manage sections)
 │   ├── ThemeEditor (customize theme)
-│   └── PageManager (manage pages)
+│   ├── PageManager (manage pages)
+│   ├── PageSettings (SEO, layout, publishing)
+│   ├── HeaderFooterEditor (header/footer config)
+│   └── NavigationEditor (nav menu management)
 ├── PreviewFrame (live preview)
-└── Right Sidebar
-    └── SectionEditor (configure selected section)
+│   └── BuiltInContentPlaceholder (system page content indicator)
+├── Right Sidebar
+│   └── SectionEditor (configure selected section)
+└── PageSelector (page dropdown with categories)
 ```
+
+### Editor Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `EditorHeader` | `EditorHeader.tsx` | Preview controls, responsive modes |
+| `SectionPalette` | `SectionPalette.tsx` | Add sections (filtered by page type) |
+| `SectionList` | `SectionList.tsx` | Reorder, toggle, delete sections |
+| `SectionEditor` | `SectionEditor.tsx` | Configure selected section |
+| `PageManager` | `PageManager.tsx` | Page CRUD, system page badges |
+| `PageSettings` | `PageSettings.tsx` | SEO, layout, OG image, publishing |
+| `PageSelector` | `PageSelector.tsx` | Page dropdown with icons |
+| `ThemeEditor` | `ThemeEditor.tsx` | Colors, typography, layout |
+| `PreviewFrame` | `PreviewFrame.tsx` | Live preview with theme |
+| `HeaderFooterEditor` | `HeaderFooterEditor.tsx` | Header/footer tabs |
+| `NavigationEditor` | `NavigationEditor.tsx` | Nav items CRUD |
+| `BuiltInContentPlaceholder` | `BuiltInContentPlaceholder.tsx` | Shows where system content renders |
+| `PositionToggle` | `PositionToggle.tsx` | Before/after section position |
 
 ### Data Flow
 1. User loads Store Builder → hooks fetch theme, pages, sections
@@ -100,6 +123,119 @@ interface HeroBannerConfig {
   height?: 'small' | 'medium' | 'large' | 'full';
 }
 ```
+
+---
+
+## Header/Footer System
+
+### Overview
+The storefront header and footer are configured via the `store_header_footer` table and rendered by dedicated production components.
+
+### Configuration Table: `store_header_footer`
+| Field | Type | Purpose |
+|-------|------|---------|
+| `header_config` | JSONB | Layout, sticky, icon visibility, colors |
+| `footer_config` | JSONB | Layout, newsletter, social, payment icons, colors |
+| `social_links` | JSONB | URLs for Facebook, Instagram, Twitter, TikTok, YouTube |
+
+### Header Layouts
+- `logo-left` - Logo on left, nav center, actions right (default)
+- `logo-center` - Logo centered, nav below
+- `logo-right` - Logo on right, actions left
+
+### Footer Layouts
+- `simple` - Single row with logo, nav links, copyright
+- `minimal` - Copyright and social links only
+- `multi-column` - Full footer with columns, newsletter
+
+### Components
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `StorefrontHeader` | `src/components/storefront/` | Production header with nav, icons |
+| `StorefrontFooter` | `src/components/storefront/` | Production footer with social, newsletter |
+| `HeaderFooterEditor` | `src/components/store-builder/editor/` | Editor panel with tabs |
+| `NavigationEditor` | `src/components/store-builder/editor/` | Navigation menu CRUD |
+
+---
+
+## Section Permissions System
+
+### Overview
+Different page types have different allowed sections. System pages (cart, checkout, profile) have limited or no custom sections to preserve built-in functionality.
+
+### Permission Levels
+| Page Type | Allowed Sections | Max Sections |
+|-----------|------------------|--------------|
+| `homepage` | All sections | Unlimited |
+| `custom` | All sections | Unlimited |
+| `about`, `contact`, `policy` | Content sections only | Limited |
+| `product`, `category` | Marketing, content | Limited |
+| `cart`, `checkout`, `profile` | None (built-in only) | 0 |
+| `search`, `order_tracking` | None (built-in only) | 0 |
+
+### Utility Functions
+Located in `src/components/store-builder/utils/sectionPermissions.ts`:
+
+```typescript
+// Check if a section type is allowed on a page type
+isSectionTypeAllowed('hero_banner', 'homepage') // true
+isSectionTypeAllowed('hero_banner', 'cart') // false
+
+// Get all allowed section types for a page
+getAllowedSectionTypes('homepage') // ['hero_banner', 'product_grid', ...]
+getAllowedSectionTypes('cart') // []
+
+// Check if page can have any sections
+canPageHaveSections('homepage') // true
+canPageHaveSections('checkout') // false
+
+// Check if more sections can be added
+canAddMoreSections('homepage', 10) // true
+canAddMoreSections('about', 10) // depends on max limit
+```
+
+---
+
+## Built-in Page Content
+
+System pages (cart, checkout, category, product) have built-in content that renders automatically, independent of custom sections.
+
+### Content Components
+| Component | Page Type | Features |
+|-----------|-----------|----------|
+| `CategoryPageContent` | category | Category grid, product filtering, breadcrumbs, sorting |
+| `ProductListingContent` | product | Search, filters, sorting, grid/list view |
+| Cart (built-in) | cart | Cart items, quantity controls, totals |
+| Checkout (built-in) | checkout | Shipping form, payment, order summary |
+
+### Behavior
+1. When `page_type` is `category` or `product`, StorePage renders the appropriate content component
+2. Custom sections can be added above/below (if page type allows)
+3. `BuiltInContentPlaceholder` shows in Store Builder preview where content will appear
+4. Content components fetch their own data (products, categories) independently
+
+---
+
+## Product Reviews System
+
+### Database Table: `product_reviews`
+| Field | Type | Purpose |
+|-------|------|---------|
+| `id` | UUID | Primary key |
+| `product_id` | UUID | FK to products |
+| `store_id` | UUID | FK to stores |
+| `customer_name` | TEXT | Reviewer display name |
+| `customer_email` | TEXT | Reviewer email (for verification) |
+| `rating` | INTEGER | 1-5 stars |
+| `title` | TEXT | Review title (optional) |
+| `content` | TEXT | Review body (optional) |
+| `is_approved` | BOOLEAN | Moderation status (default false) |
+| `created_at` | TIMESTAMPTZ | Submission time |
+
+### RLS Policies
+- **Public**: Can SELECT where `is_approved = true`
+- **Authenticated**: Can INSERT reviews
+- **Store members**: Full CRUD access for moderation
 
 ---
 
@@ -271,6 +407,9 @@ This project follows [Semantic Versioning](https://semver.org/):
 - Phase 2: Theme integration ✅
 - Phase 3: Customer storefront renderer ✅
 - Phase 3.5: Order system fix + Customer detail ✅
+- Phase 3.7: Storefront header/footer + Navigation ✅
+- Phase 3.8: Built-in page content + Section permissions ✅
+- Phase 3.9: Product reviews table ✅
 - Phase 4: Header/footer auto-initialization ✅
 - Phase 5: Polish, custom domains (TODO)
 

@@ -41,6 +41,130 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.5] - 2026-01-12
+
+### Added - Product Reviews System
+
+**Database Table (`product_reviews`)**
+- New table for customer product reviews with 1-5 star ratings
+- Fields: `customer_name`, `customer_email`, `rating` (1-5), `title`, `content`, `is_approved`
+- RLS policies: Public can view approved reviews, authenticated users can submit, store members can manage
+- Performance indexes on `product_id`, `store_id`, and `rating`
+
+**Store Status Default Change**
+- Changed default store status from 'pending' to 'active'
+- Existing pending stores updated to active
+
+### Added - Storefront Header/Footer System
+
+**Production Components**
+- `StorefrontHeader.tsx` - Customer-facing header with navigation, logo, search, cart, account icons
+  - 3 layout modes: `logo-left`, `logo-center`, `logo-right`
+  - Sticky header option
+  - Mobile menu with Sheet component
+  - Dropdown navigation support (parent-child items)
+- `StorefrontFooter.tsx` - Customer-facing footer with multiple layouts
+  - 3 layouts: `simple`, `minimal`, `multi-column`
+  - Social media links (Facebook, Instagram, Twitter, TikTok, YouTube, LinkedIn)
+  - Newsletter signup form
+  - Payment icons
+  - Custom copyright text
+
+**Store Builder Editors**
+- `HeaderFooterEditor.tsx` - Combined editor with tabs for header and footer
+  - Header: layout selection, sticky toggle, show/hide icons, custom colors
+  - Footer: layout selection, social links, newsletter toggle, copyright text, custom colors
+- `NavigationEditor.tsx` - Full navigation menu management
+  - Add/Edit/Delete navigation items
+  - Reorder with up/down buttons
+  - Link to internal pages or external URLs
+  - Parent-child relationships (dropdowns)
+  - Highlight as button option
+  - Open in new tab option
+
+### Added - Built-in Page Content System
+
+**Storefront Page Components** (`src/components/storefront/pages/`)
+- `CategoryPageContent.tsx` - Smart category/product listing
+  - Shows category grid when no category selected
+  - Shows filtered products when category selected via URL parameter
+  - Breadcrumb navigation
+  - Sort options (newest, price low→high, price high→low, name A→Z)
+  - Grid/List view toggle
+  - Related categories sidebar
+- `ProductListingContent.tsx` - Full product listing with filters
+  - Search functionality with form
+  - Category sidebar filter
+  - Sort options
+  - Grid/List view toggle
+  - Responsive design with skeleton loading
+
+**Store Builder Components**
+- `BuiltInContentPlaceholder.tsx` - Visual indicator for system page content
+  - Shows where built-in content renders in preview
+  - Icons and descriptions for: product, category, cart, checkout, profile, search
+- `PageSettings.tsx` - Comprehensive page settings panel
+  - Basic info (title, URL slug)
+  - SEO settings (title, meta description with character counts)
+  - Social sharing (OG image URL)
+  - Layout options (show/hide header/footer)
+  - Publishing toggle
+  - Section configuration info
+- `PageSelector.tsx` - Page dropdown selector in editor
+  - Categorized page list (System, Shop, Content, Custom)
+  - Page type icons
+  - Status badges
+
+### Added - Section Permissions System
+
+**Utility Functions** (`src/components/store-builder/utils/sectionPermissions.ts`)
+- `isSectionTypeAllowed(sectionType, pageType)` - Check if section is allowed for page type
+- `getAllowedSectionTypes(pageType)` - Get array of allowed sections for a page
+- `canPageHaveSections(pageType)` - Check if page allows any sections
+- `canAddMoreSections(pageType, currentCount)` - Check if max section limit reached
+- `getPagePermissionInfo(pageType)` - Get permission info for UI display
+- `getAllowedSectionCount(pageType)` - Get count of allowed section types
+
+**Validation in Hooks**
+- `usePageSections` now validates:
+  - Section type allowed for page type
+  - Max sections limit not exceeded
+  - Page can have sections at all
+
+### Added - Additional Editor Components
+
+- `PositionToggle.tsx` - Toggle for before/after section positioning
+- Updated `SectionPalette.tsx` to filter sections by page type permissions
+
+---
+
+## [0.8.0] - 2026-01-11
+
+### Fixed - Store Initialization Root Cause
+
+**Database Trigger Enhancement (`auto_initialize_store_pages`)**
+- **Root Cause Identified**: Stores created before opening Store Builder were missing `store_header_footer` and `store_themes` records, causing headers/footers to not render on storefronts
+- Extended the `auto_initialize_store_pages()` trigger function to also create:
+  - `store_header_footer` record with default layout configuration
+  - `store_themes` record with default theme (colors, typography, layout)
+- All new stores now automatically get complete initialization on creation
+- Uses `ON CONFLICT DO NOTHING` for idempotency
+
+**Backfill Migration**
+- Created missing `store_header_footer` records for all existing stores
+- Created missing `store_themes` records for all existing stores
+- All storefronts now show headers/footers immediately without requiring Store Builder to be opened first
+
+### Changed
+- Removed Phase 4 header/footer from planned items (now complete via database trigger)
+
+### Database
+- Updated function: `auto_initialize_store_pages()` - Now creates header/footer and theme configs
+- Backfilled: All existing stores now have `store_header_footer` records
+- Backfilled: All existing stores now have `store_themes` records
+
+---
+
 ## [0.8.0] - 2026-01-11
 
 ### Fixed - Critical Order System Bugs
