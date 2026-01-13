@@ -266,12 +266,13 @@ This project follows [Semantic Versioning](https://semver.org/):
 | **Minor (0.X.0)** | New features (e.g., Phase 3 storefront) |
 | **Patch (0.0.X)** | Bug fixes, minor improvements |
 
-### Current Version: 0.8.0
+### Current Version: 0.9.0
 - Phase 1: Store Builder editor ✅
 - Phase 2: Theme integration ✅
 - Phase 3: Customer storefront renderer ✅
 - Phase 3.5: Order system fix + Customer detail ✅
-- Phase 4: Header/footer, polish (TODO)
+- Phase 4: Header/footer auto-initialization ✅
+- Phase 5: Polish, custom domains (TODO)
 
 ---
 
@@ -321,6 +322,12 @@ toast({ title: "Error", variant: "destructive" });
 - Check sections have `is_visible` set to true
 - Confirm `sort_order` is set correctly
 - Check store `status` is 'active'
+
+### Header/Footer Not Showing
+- **Fixed in v0.9.0**: Database trigger now auto-creates `store_header_footer` on store creation
+- For older stores: Run backfill migration to create missing records
+- Check `store_header_footer` table has a record for the store
+- Verify `header_config` and `footer_config` are not null
 
 ### Orders Not Appearing
 - Check console logs for `[CHECKOUT]` prefixed messages

@@ -8,10 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Phase 4: Header/footer components for storefront
 - Phase 4: Toast notifications for Store Builder actions
 - Phase 4: Image upload integration for section backgrounds
 - Multi-tenant domain system (subdomains + custom domains)
+
+---
+
+## [0.9.0] - 2026-01-13
+
+### Fixed - Store Initialization Root Cause
+
+**Database Trigger Enhancement (`auto_initialize_store_pages`)**
+- **Root Cause Identified**: Stores created before opening Store Builder were missing `store_header_footer` and `store_themes` records, causing headers/footers to not render on storefronts
+- Extended the `auto_initialize_store_pages()` trigger function to also create:
+  - `store_header_footer` record with default layout configuration
+  - `store_themes` record with default theme (colors, typography, layout)
+- All new stores now automatically get complete initialization on creation
+- Uses `ON CONFLICT DO NOTHING` for idempotency
+
+**Backfill Migration**
+- Created missing `store_header_footer` records for all existing stores
+- Created missing `store_themes` records for all existing stores
+- All storefronts now show headers/footers immediately without requiring Store Builder to be opened first
+
+### Changed
+- Removed Phase 4 header/footer from planned items (now complete via database trigger)
+
+### Database
+- Updated function: `auto_initialize_store_pages()` - Now creates header/footer and theme configs
+- Backfilled: All existing stores now have `store_header_footer` records
+- Backfilled: All existing stores now have `store_themes` records
 
 ---
 
