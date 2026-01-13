@@ -23,7 +23,7 @@
 
 import { useState, useEffect } from 'react';
 import { useStore } from '@/contexts/StoreContext';
-import { useStorePages, usePageSections, useStoreTheme } from '@/hooks/useStoreBuilder';
+import { useStorePages, usePageSections, useStoreTheme, useStoreHeaderFooter, useStoreNavigation } from '@/hooks/useStoreBuilder';
 import { StorePage, PageSection, EditorState } from './types';
 import { SectionPalette } from './editor/SectionPalette';
 import { SectionList } from './editor/SectionList';
@@ -33,8 +33,12 @@ import { PageSettings } from './editor/PageSettings';
 import { ThemeEditor } from './editor/ThemeEditor';
 import { PreviewFrame } from './editor/PreviewFrame';
 import { EditorHeader } from './editor/EditorHeader';
+import { HeaderFooterEditor } from './editor/HeaderFooterEditor';
+import { NavigationEditor } from './editor/NavigationEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, Layout, Menu, Link as LinkIcon } from 'lucide-react';
 
 export function StoreBuilder() {
   // ==========================================================================
