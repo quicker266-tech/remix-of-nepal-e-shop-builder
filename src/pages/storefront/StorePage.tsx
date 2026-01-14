@@ -9,11 +9,11 @@
  * - Page sections from database
  * - Footer (if enabled for the page)
  * 
- * PAGE TYPES WITH BUILT-IN CONTENT:
- * - category: CategoryPageContent (category grid / product listing)
- * - about: AboutPageContent (store info)
- * - contact: ContactPageContent (contact form)
- * - homepage: Sections only (no built-in content)
+ * ROUTING MODES:
+ * - Subdomain: bombay.extendbee.com/page/about
+ * - Path-based: extendbee.com/store/bombay/page/about
+ * 
+ * Uses StorefrontContext when available, falls back to URL params.
  * 
  * ============================================================================
  */
@@ -21,6 +21,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useStorefrontOptional } from "@/contexts/StorefrontContext";
+import { useStoreLinksWithFallback } from "@/hooks/useStoreLinks";
 import {
   HeroBanner,
   HeroSlider,
@@ -118,7 +120,19 @@ interface HeaderFooterConfig {
 }
 
 export default function StorePage() {
-  const { storeSlug, pageSlug = "home" } = useParams();
+  // Try to get from StorefrontContext first (subdomain mode)
+  const storefrontContext = useStorefrontOptional();
+  
+  // Get from URL params (path mode)
+  const { storeSlug: urlStoreSlug, pageSlug = "home" } = useParams();
+  
+  // Determine actual store slug (context takes priority)
+  const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Use store links hook
+  const links = useStoreLinksWithFallback(storeSlug || '');
+  
   const [store, setStore] = useState<Store | null>(null);
   const [theme, setTheme] = useState<Theme | null>(null);
   const [page, setPage] = useState<Page | null>(null);
@@ -136,13 +150,13 @@ export default function StorePage() {
       setError(null);
 
       try {
-        // 1. Fetch store by slug
+        // 1. Fetch store by slug or subdomain
         const { data: storeData, error: storeError } = await supabase
           .from("stores")
           .select("id, name, slug, logo_url")
-          .eq("slug", storeSlug)
+          .or(`slug.eq.${storeSlug},subdomain.eq.${storeSlug}`)
           .eq("status", "active")
-          .single();
+          .maybeSingle();
 
         if (storeError || !storeData) {
           setError("Store not found");
@@ -158,7 +172,7 @@ export default function StorePage() {
           .select("colors, typography, layout")
           .eq("store_id", storeData.id)
           .eq("is_active", true)
-          .single();
+          .maybeSingle();
 
         if (themeData) {
           setTheme({
@@ -173,7 +187,7 @@ export default function StorePage() {
           .from("store_header_footer")
           .select("header_config, footer_config, social_links")
           .eq("store_id", storeData.id)
-          .single();
+          .maybeSingle();
 
         if (headerFooterData) {
           setHeaderFooter({
@@ -199,7 +213,7 @@ export default function StorePage() {
           .eq("store_id", storeData.id)
           .eq("slug", pageSlug)
           .eq("is_published", true)
-          .single();
+          .maybeSingle();
 
         if (pageError || !pageData) {
           // Try to find homepage
@@ -209,7 +223,7 @@ export default function StorePage() {
             .eq("store_id", storeData.id)
             .eq("page_type", "homepage")
             .eq("is_published", true)
-            .single();
+            .maybeSingle();
 
           if (!homePage) {
             setError("Page not found");
@@ -374,6 +388,7 @@ export default function StorePage() {
           store={store}
           headerConfig={headerFooter.header_config}
           navItems={headerNavItems}
+          isSubdomainMode={isSubdomainMode}
         />
       )}
 
@@ -423,6 +438,7 @@ export default function StorePage() {
           footerConfig={headerFooter.footer_config}
           socialLinks={headerFooter.social_links}
           navItems={footerNavItems}
+          isSubdomainMode={isSubdomainMode}
         />
       )}
     </div>

@@ -1,3 +1,14 @@
+/**
+ * ============================================================================
+ * PRODUCT DETAIL PAGE
+ * ============================================================================
+ * 
+ * Displays full product information with images, variants, and add-to-cart.
+ * Supports both subdomain and path-based routing modes.
+ * 
+ * ============================================================================
+ */
+
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, ShoppingCart, Store as StoreIcon } from 'lucide-react';
@@ -6,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
+import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -14,7 +27,18 @@ type Product = Tables<'products'>;
 type ProductVariant = Tables<'product_variants'>;
 
 export default function ProductDetail() {
-  const { storeSlug, productSlug } = useParams();
+  // Try StorefrontContext first (subdomain mode)
+  const storefrontContext = useStorefrontOptional();
+  
+  // Get from URL params
+  const { storeSlug: urlStoreSlug, productSlug } = useParams();
+  
+  // Determine store slug
+  const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
+  
+  // Get link builder
+  const links = useStoreLinksWithFallback(storeSlug || '');
+  
   const { addToCart, cartItemCount } = useCart();
   const [store, setStore] = useState<Store | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
@@ -32,11 +56,11 @@ export default function ProductDetail() {
 
   const fetchProductData = async () => {
     try {
-      // Fetch store first
+      // Fetch store first (by slug or subdomain)
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
-        .eq('slug', storeSlug)
+        .or(`slug.eq.${storeSlug},subdomain.eq.${storeSlug}`)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -98,10 +122,10 @@ export default function ProductDetail() {
     : 0;
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || !storeSlug) return;
 
     addToCart({
-      storeSlug: storeSlug!,
+      storeSlug: storeSlug,
       productId: product.id,
       variantId: selectedVariant?.id || null,
       name: product.name,
@@ -140,7 +164,7 @@ export default function ProductDetail() {
           <p className="text-muted-foreground mb-4">
             This product doesn't exist or is no longer available.
           </p>
-          <Link to={`/store/${storeSlug}`}>
+          <Link to={links.home()}>
             <Button>Back to Store</Button>
           </Link>
         </div>
@@ -155,12 +179,12 @@ export default function ProductDetail() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to={`/store/${storeSlug}`}>
+              <Link to={links.home()}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link to={`/store/${storeSlug}`} className="flex items-center gap-2">
+              <Link to={links.home()} className="flex items-center gap-2">
                 {store.logo_url ? (
                   <img 
                     src={store.logo_url} 
@@ -176,7 +200,7 @@ export default function ProductDetail() {
               </Link>
             </div>
 
-            <Link to={`/store/${storeSlug}/cart`}>
+            <Link to={links.cart()}>
               <Button variant="outline" size="icon" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {cartItemCount > 0 && (

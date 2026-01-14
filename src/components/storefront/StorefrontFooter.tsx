@@ -4,7 +4,7 @@
  * ============================================================================
  * 
  * Customer-facing footer with navigation links, social icons, and copyright.
- * Receives configuration from store_header_footer table.
+ * Supports both subdomain and path-based routing modes.
  * 
  * ============================================================================
  */
@@ -69,16 +69,25 @@ interface StorefrontFooterProps {
   footerConfig: FooterConfig;
   socialLinks: SocialLinks;
   navItems: NavItem[];
+  isSubdomainMode?: boolean;
 }
 
-export function StorefrontFooter({ store, footerConfig, socialLinks, navItems }: StorefrontFooterProps) {
+export function StorefrontFooter({ store, footerConfig, socialLinks, navItems, isSubdomainMode = false }: StorefrontFooterProps) {
   const currentYear = new Date().getFullYear();
   const copyrightText = footerConfig.copyrightText || `© ${currentYear} ${store.name}. All rights reserved.`;
+
+  // Build store-relative URL
+  const buildStoreUrl = (path: string): string => {
+    if (isSubdomainMode) {
+      return path;
+    }
+    return `/store/${store.slug}${path}`;
+  };
 
   // Build navigation URL
   const getNavUrl = (item: NavItem): string => {
     if (item.url) return item.url;
-    if (item.page_id) return `/store/${store.slug}/page/${item.page_id}`;
+    if (item.page_id) return buildStoreUrl(`/page/${item.page_id}`);
     return '#';
   };
 
@@ -161,7 +170,7 @@ export function StorefrontFooter({ store, footerConfig, socialLinks, navItems }:
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             {/* Logo/Name */}
-            <Link to={`/store/${store.slug}`} className="text-lg font-bold">
+            <Link to={buildStoreUrl('/')} className="text-lg font-bold">
               {store.name}
             </Link>
 
@@ -206,7 +215,7 @@ export function StorefrontFooter({ store, footerConfig, socialLinks, navItems }:
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Column */}
           <div className="space-y-4">
-            <Link to={`/store/${store.slug}`} className="text-xl font-bold">
+            <Link to={buildStoreUrl('/')} className="text-xl font-bold">
               {store.name}
             </Link>
             {footerConfig.showSocialLinks && renderSocialLinks()}

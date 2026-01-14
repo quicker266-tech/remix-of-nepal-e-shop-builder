@@ -1,12 +1,36 @@
+/**
+ * ============================================================================
+ * SHOPPING CART PAGE
+ * ============================================================================
+ * 
+ * Displays cart items with quantity controls and checkout button.
+ * Supports both subdomain and path-based routing modes.
+ * 
+ * ============================================================================
+ */
+
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Store as StoreIcon } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
+import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
 
 export default function Cart() {
-  const { storeSlug } = useParams();
+  // Try StorefrontContext first (subdomain mode)
+  const storefrontContext = useStorefrontOptional();
+  
+  // Get from URL params
+  const { storeSlug: urlStoreSlug } = useParams();
+  
+  // Determine store slug
+  const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
+  
+  // Get link builder
+  const links = useStoreLinksWithFallback(storeSlug || '');
+  
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, clearCart, cartTotal } = useCart();
 
@@ -18,7 +42,7 @@ export default function Cart() {
         <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center gap-4">
-              <Link to={`/store/${storeSlug}`}>
+              <Link to={links.home()}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -35,7 +59,7 @@ export default function Cart() {
             <p className="text-muted-foreground mb-6">
               Add some products to get started
             </p>
-            <Link to={`/store/${storeSlug}`}>
+            <Link to={links.home()}>
               <Button>Continue Shopping</Button>
             </Link>
           </div>
@@ -50,7 +74,7 @@ export default function Cart() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to={`/store/${storeSlug}`}>
+              <Link to={links.home()}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -152,11 +176,11 @@ export default function Cart() {
                 <Button 
                   className="w-full" 
                   size="lg"
-                  onClick={() => navigate(`/store/${storeSlug}/checkout`)}
+                  onClick={() => navigate(links.checkout())}
                 >
                   Proceed to Checkout
                 </Button>
-                <Link to={`/store/${storeSlug}`} className="w-full">
+                <Link to={links.home()} className="w-full">
                   <Button variant="outline" className="w-full">
                     Continue Shopping
                   </Button>
