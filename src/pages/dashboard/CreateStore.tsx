@@ -89,6 +89,8 @@ export default function CreateStore() {
         .insert({
           name: values.name,
           slug: values.slug,
+          subdomain: values.slug,  // Set subdomain same as slug initially
+          domain_type: 'path',     // Default to path-based routing
           description: values.description || null,
           logo_url: values.logo_url || null,
           owner_id: user.id,
@@ -154,9 +156,17 @@ export default function CreateStore() {
                   <FormItem>
                     <FormLabel>Store URL</FormLabel>
                     <FormControl>
-                      <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-2">pasalhub.com/</span>
-                        <Input placeholder="my-store" {...field} />
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <span className="text-sm text-muted-foreground mr-2 whitespace-nowrap">
+                            extendbee.com/store/
+                          </span>
+                          <Input placeholder="my-store" {...field} />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Subdomain URL: <span className="font-medium">{field.value || 'my-store'}.extendbee.com</span>
+                          <span className="ml-1">(contact support to activate)</span>
+                        </p>
                       </div>
                     </FormControl>
                     <FormDescription>
