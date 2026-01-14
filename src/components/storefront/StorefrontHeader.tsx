@@ -4,7 +4,7 @@
  * ============================================================================
  * 
  * Customer-facing header with navigation, logo, cart, and mobile menu.
- * Receives configuration from store_header_footer table.
+ * Supports both subdomain and path-based routing modes.
  * 
  * ============================================================================
  */
@@ -63,18 +63,27 @@ interface StorefrontHeaderProps {
   store: Store;
   headerConfig: HeaderConfig;
   navItems: NavItem[];
+  isSubdomainMode?: boolean;
 }
 
-export function StorefrontHeader({ store, headerConfig, navItems }: StorefrontHeaderProps) {
+export function StorefrontHeader({ store, headerConfig, navItems, isSubdomainMode = false }: StorefrontHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Filter only top-level nav items (no parent)
   const topLevelItems = navItems.filter(item => !item.parent_id);
 
+  // Build store-relative URL
+  const buildStoreUrl = (path: string): string => {
+    if (isSubdomainMode) {
+      return path;
+    }
+    return `/store/${store.slug}${path}`;
+  };
+
   // Build navigation URL
   const getNavUrl = (item: NavItem): string => {
     if (item.url) return item.url;
-    if (item.page_id) return `/store/${store.slug}/page/${item.page_id}`;
+    if (item.page_id) return buildStoreUrl(`/page/${item.page_id}`);
     return '#';
   };
 
@@ -145,7 +154,7 @@ export function StorefrontHeader({ store, headerConfig, navItems }: StorefrontHe
       </SheetTrigger>
       <SheetContent side="left" className="w-80">
         <div className="flex items-center justify-between mb-6">
-          <Link to={`/store/${store.slug}`} onClick={() => setMobileMenuOpen(false)}>
+          <Link to={buildStoreUrl('/')} onClick={() => setMobileMenuOpen(false)}>
             {store.logo_url ? (
               <img src={store.logo_url} alt={store.name} className="h-8" />
             ) : (
@@ -221,7 +230,7 @@ export function StorefrontHeader({ store, headerConfig, navItems }: StorefrontHe
           {renderMobileNav()}
 
           {/* Logo */}
-          <Link to={`/store/${store.slug}`} className="flex items-center">
+          <Link to={buildStoreUrl('/')} className="flex items-center">
             {store.logo_url ? (
               <img src={store.logo_url} alt={store.name} className="h-8 md:h-10" />
             ) : (
@@ -249,7 +258,7 @@ export function StorefrontHeader({ store, headerConfig, navItems }: StorefrontHe
             )}
             
             {headerConfig.showCart && (
-              <Link to={`/store/${store.slug}/cart`}>
+              <Link to={buildStoreUrl('/cart')}>
                 <Button variant="ghost" size="icon">
                   <ShoppingCart className="h-5 w-5" />
                   <span className="sr-only">Cart</span>

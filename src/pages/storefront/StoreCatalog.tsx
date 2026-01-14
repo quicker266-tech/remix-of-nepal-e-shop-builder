@@ -4,21 +4,7 @@
  * ============================================================================
  * 
  * Public-facing product catalog for a store.
- * Displays products with search, category filtering, and shopping cart.
- * 
- * STANDALONE VERSION:
- * - Fetches its own store data from URL params
- * - Renders its own header
- * 
- * URL STRUCTURE:
- * /store/:storeSlug/catalog - Catalog page
- * 
- * FEATURES:
- * - Search products by name/description
- * - Filter by category
- * - Featured products section
- * - Discount badges for products with compare-at price
- * - Responsive design (2-4 columns based on screen size)
+ * Supports both subdomain and path-based routing modes.
  * 
  * ============================================================================
  */
@@ -32,18 +18,31 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/contexts/CartContext';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
+import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
+import type { Tables } from '@/integrations/supabase/types';
 
 type Store = Tables<'stores'>;
 type Product = Tables<'products'>;
 type Category = Tables<'categories'>;
 
 export default function StoreCatalog() {
-  const { storeSlug } = useParams();
+  // Try StorefrontContext first (subdomain mode)
+  const storefrontContext = useStorefrontOptional();
+  
+  // Get from URL params
+  const { storeSlug: urlStoreSlug } = useParams();
+  
+  // Determine store slug
+  const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
+  
+  // Get link builder
+  const links = useStoreLinksWithFallback(storeSlug || '');
+  
   const { cartItemCount } = useCart();
   
-  // Store state (fetched from URL params)
+  // Store state
   const [store, setStore] = useState<Store | null>(null);
   
   // Data state
@@ -55,25 +54,21 @@ export default function StoreCatalog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Fetch store first, then products and categories
   useEffect(() => {
     if (storeSlug) {
       fetchStoreAndData();
     }
   }, [storeSlug]);
 
-  /**
-   * Fetch store, then products and categories
-   */
   const fetchStoreAndData = async () => {
     try {
       setLoading(true);
 
-      // Fetch store first
+      // Fetch store by slug or subdomain
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('*')
-        .eq('slug', storeSlug)
+        .or(`slug.eq.${storeSlug},subdomain.eq.${storeSlug}`)
         .eq('status', 'active')
         .maybeSingle();
 
@@ -111,10 +106,6 @@ export default function StoreCatalog() {
     }
   };
 
-  // ================================================================
-  // CLIENT-SIDE FILTERING
-  // ================================================================
-
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.description?.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -124,10 +115,6 @@ export default function StoreCatalog() {
 
   const featuredProducts = filteredProducts.filter(p => p.featured);
   const regularProducts = filteredProducts.filter(p => !p.featured);
-
-  // ================================================================
-  // LOADING STATE
-  // ================================================================
 
   if (loading) {
     return (
@@ -145,7 +132,6 @@ export default function StoreCatalog() {
     );
   }
 
-  // Store not found
   if (!store) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -162,10 +148,6 @@ export default function StoreCatalog() {
     );
   }
 
-  // ================================================================
-  // MAIN RENDER
-  // ================================================================
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -173,12 +155,12 @@ export default function StoreCatalog() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link to={`/store/${storeSlug}`}>
+              <Link to={links.home()}>
                 <Button variant="ghost" size="icon">
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link to={`/store/${storeSlug}`} className="flex items-center gap-2">
+              <Link to={links.home()} className="flex items-center gap-2">
                 {store.logo_url ? (
                   <img 
                     src={store.logo_url} 
@@ -194,7 +176,7 @@ export default function StoreCatalog() {
               </Link>
             </div>
 
-            <Link to={`/store/${storeSlug}/cart`}>
+            <Link to={links.cart()}>
               <Button variant="outline" size="icon" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {cartItemCount > 0 && (
@@ -264,7 +246,7 @@ export default function StoreCatalog() {
             <h2 className="text-xl font-semibold mb-4">Featured</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} storeSlug={storeSlug!} />
+                <ProductCard key={product.id} product={product} links={links} />
               ))}
             </div>
           </div>
@@ -281,7 +263,7 @@ export default function StoreCatalog() {
           {regularProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {regularProducts.map((product) => (
-                <ProductCard key={product.id} product={product} storeSlug={storeSlug!} />
+                <ProductCard key={product.id} product={product} links={links} />
               ))}
             </div>
           ) : (
@@ -295,11 +277,8 @@ export default function StoreCatalog() {
   );
 }
 
-// ============================================================================
-// PRODUCT CARD COMPONENT
-// ============================================================================
-
-function ProductCard({ product, storeSlug }: { product: Product; storeSlug: string }) {
+// Product Card Component
+function ProductCard({ product, links }: { product: Product; links: ReturnType<typeof useStoreLinksWithFallback> }) {
   const images = (product.images as string[]) || [];
   const imageUrl = images[0] || '/placeholder.svg';
 
@@ -309,7 +288,7 @@ function ProductCard({ product, storeSlug }: { product: Product; storeSlug: stri
     : 0;
 
   return (
-    <Link to={`/store/${storeSlug}/product/${product.slug}`}>
+    <Link to={links.product(product.slug)}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="aspect-square relative overflow-hidden bg-muted">
           <img

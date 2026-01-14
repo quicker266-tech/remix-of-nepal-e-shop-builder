@@ -1120,7 +1120,11 @@ export type Database = {
           business_type: string
           city: string | null
           created_at: string
+          custom_domain: string | null
           description: string | null
+          domain_type: string | null
+          domain_verified: boolean | null
+          domain_verified_at: string | null
           email: string | null
           id: string
           logo_url: string | null
@@ -1130,6 +1134,7 @@ export type Database = {
           settings: Json | null
           slug: string
           status: Database["public"]["Enums"]["store_status"]
+          subdomain: string | null
           updated_at: string
         }
         Insert: {
@@ -1139,7 +1144,11 @@ export type Database = {
           business_type?: string
           city?: string | null
           created_at?: string
+          custom_domain?: string | null
           description?: string | null
+          domain_type?: string | null
+          domain_verified?: boolean | null
+          domain_verified_at?: string | null
           email?: string | null
           id?: string
           logo_url?: string | null
@@ -1149,6 +1158,7 @@ export type Database = {
           settings?: Json | null
           slug: string
           status?: Database["public"]["Enums"]["store_status"]
+          subdomain?: string | null
           updated_at?: string
         }
         Update: {
@@ -1158,7 +1168,11 @@ export type Database = {
           business_type?: string
           city?: string | null
           created_at?: string
+          custom_domain?: string | null
           description?: string | null
+          domain_type?: string | null
+          domain_verified?: boolean | null
+          domain_verified_at?: string | null
           email?: string | null
           id?: string
           logo_url?: string | null
@@ -1168,6 +1182,7 @@ export type Database = {
           settings?: Json | null
           slug?: string
           status?: Database["public"]["Enums"]["store_status"]
+          subdomain?: string | null
           updated_at?: string
         }
         Relationships: []

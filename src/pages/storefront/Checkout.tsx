@@ -1,3 +1,14 @@
+/**
+ * ============================================================================
+ * CHECKOUT PAGE
+ * ============================================================================
+ * 
+ * Handles customer information collection and order placement.
+ * Supports both subdomain and path-based routing modes.
+ * 
+ * ============================================================================
+ */
+
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -8,6 +19,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
+import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -47,7 +60,18 @@ const checkoutSchema = z.object({
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function Checkout() {
-  const { storeSlug } = useParams();
+  // Try StorefrontContext first (subdomain mode)
+  const storefrontContext = useStorefrontOptional();
+  
+  // Get from URL params
+  const { storeSlug: urlStoreSlug } = useParams();
+  
+  // Determine store slug
+  const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
+  
+  // Get link builder
+  const links = useStoreLinksWithFallback(storeSlug || '');
+  
   const navigate = useNavigate();
   const { items, cartTotal, clearCart } = useCart();
   
@@ -95,7 +119,6 @@ export default function Checkout() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form with zod schema
     const validatedData = validateForm();
     if (!validatedData) {
       toast.error('Please fix the form errors');
@@ -110,37 +133,20 @@ export default function Checkout() {
     setIsSubmitting(true);
 
     try {
-      // Sanitize notes field to prevent XSS when displayed
       const sanitizedNotes = validatedData.notes ? sanitizeHtml(validatedData.notes) : '';
       
-      console.log('🛒 [CHECKOUT] Starting checkout process...', {
-        storeSlug,
-        email: validatedData.email,
-        cartTotal,
-        itemCount: items.length,
-      });
-
-      // ================================================================
-      // STEP 1: Get store ID from slug
-      // ================================================================
-      console.log('🏪 [CHECKOUT] Step 1: Fetching store...');
+      // Step 1: Get store ID from slug or subdomain
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .select('id, slug, name')
-        .eq('slug', storeSlug)
+        .or(`slug.eq.${storeSlug},subdomain.eq.${storeSlug}`)
         .single();
 
       if (storeError || !storeData) {
-        console.error('❌ [CHECKOUT] Store lookup failed:', storeError);
         throw new Error('Store not found');
       }
 
-      console.log('✅ [CHECKOUT] Store found:', storeData);
-
-      // ================================================================
-      // STEP 2: Create or update customer using RPC function
-      // ================================================================
-      console.log('👤 [CHECKOUT] Step 2: Creating/updating customer...');
+      // Step 2: Create or update customer
       const { data: customerId, error: customerError } = await supabase
         .rpc('create_or_update_checkout_customer', {
           p_store_id: storeData.id,
@@ -151,19 +157,10 @@ export default function Checkout() {
           p_city: validatedData.city,
         });
 
-      if (customerError) {
-        console.error('❌ [CHECKOUT] Customer creation failed:', customerError);
-        throw customerError;
-      }
+      if (customerError) throw customerError;
 
-      console.log('✅ [CHECKOUT] Customer created/updated:', customerId);
-
-      // ================================================================
-      // STEP 3: Create order record
-      // ================================================================
+      // Step 3: Create order
       const newOrderNumber = generateOrderNumber();
-      console.log('📦 [CHECKOUT] Step 3: Creating order...', { orderNumber: newOrderNumber });
-
       const shippingAddress = {
         full_name: validatedData.fullName,
         address: validatedData.address,
@@ -190,30 +187,9 @@ export default function Checkout() {
         .select()
         .single();
 
-      if (orderError) {
-        console.error('❌ [CHECKOUT] Order creation failed:', orderError);
-        console.error('Order error details:', {
-          message: orderError.message,
-          code: orderError.code,
-          details: orderError.details,
-          hint: orderError.hint,
-        });
-        throw orderError;
-      }
+      if (orderError) throw orderError;
 
-      console.log('✅ [CHECKOUT] Order created:', {
-        id: order.id,
-        order_number: order.order_number,
-        total: order.total,
-      });
-
-      // ================================================================
-      // STEP 4: Create order items
-      // ================================================================
-      console.log('📋 [CHECKOUT] Step 4: Creating order items...', {
-        itemCount: items.length,
-      });
-
+      // Step 4: Create order items
       const orderItems = items.map((item) => ({
         order_id: order.id,
         product_id: item.productId,
@@ -226,38 +202,19 @@ export default function Checkout() {
         total_price: item.price * item.quantity,
       }));
 
-      console.log('📋 [CHECKOUT] Order items to insert:', orderItems);
-
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) {
-        console.error('❌ [CHECKOUT] Order items creation failed:', itemsError);
-        console.error('Items error details:', {
-          message: itemsError.message,
-          code: itemsError.code,
-          details: itemsError.details,
-          hint: itemsError.hint,
-        });
-        throw itemsError;
-      }
+      if (itemsError) throw itemsError;
 
-      console.log('✅ [CHECKOUT] Order items created successfully');
-
-      // ================================================================
-      // STEP 5: Update customer stats (fixed increment logic)
-      // ================================================================
-      console.log('📊 [CHECKOUT] Step 5: Updating customer stats...');
-      
-      // First, get current customer stats
+      // Step 5: Update customer stats
       const { data: currentCustomer } = await supabase
         .from('customers')
         .select('total_orders, total_spent')
         .eq('id', customerId)
         .single();
 
-      // Now increment properly
       const newTotalOrders = (currentCustomer?.total_orders || 0) + 1;
       const newTotalSpent = (currentCustomer?.total_spent || 0) + orderTotal;
 
@@ -269,49 +226,27 @@ export default function Checkout() {
         })
         .eq('id', customerId);
 
-      console.log('✅ [CHECKOUT] Customer stats updated:', {
-        total_orders: newTotalOrders,
-        total_spent: newTotalSpent,
-      });
-
-      // ================================================================
-      // SUCCESS! Show order confirmation
-      // ================================================================
-      console.log('🎉 [CHECKOUT] Checkout complete!', {
-        order_id: order.id,
-        order_number: newOrderNumber,
-        total: orderTotal,
-      });
-
+      // Success!
       setOrderNumber(newOrderNumber);
       setOrderComplete(true);
       clearCart();
       toast.success('Order placed successfully!');
       
     } catch (error: any) {
-      console.error('❌ [CHECKOUT] CHECKOUT FAILED:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        stack: error.stack,
-      });
-      toast.error(error.message || 'Failed to place order. Please check console for details.');
+      console.error('Checkout failed:', error);
+      toast.error(error.message || 'Failed to place order');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ================================================================
-  // ORDER CONFIRMATION VIEW
-  // ================================================================
+  // Order Confirmation View
   if (orderComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-success" />
+            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
             <p className="text-muted-foreground mb-4">
               Thank you for your order. We'll contact you shortly.
@@ -320,7 +255,7 @@ export default function Checkout() {
               <p className="text-sm text-muted-foreground">Order Number</p>
               <p className="text-xl font-mono font-bold">{orderNumber}</p>
             </div>
-            <Link to={`/store/${storeSlug}`}>
+            <Link to={links.home()}>
               <Button className="w-full">Continue Shopping</Button>
             </Link>
           </CardContent>
@@ -329,15 +264,13 @@ export default function Checkout() {
     );
   }
 
-  // ================================================================
-  // EMPTY CART VIEW
-  // ================================================================
+  // Empty Cart View
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-xl font-bold mb-2">Your cart is empty</h1>
-          <Link to={`/store/${storeSlug}`}>
+          <Link to={links.home()}>
             <Button>Back to Store</Button>
           </Link>
         </div>
@@ -345,15 +278,13 @@ export default function Checkout() {
     );
   }
 
-  // ================================================================
-  // CHECKOUT FORM VIEW
-  // ================================================================
+  // Checkout Form View
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Link to={`/store/${storeSlug}/cart`}>
+            <Link to={links.cart()}>
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
@@ -475,18 +406,21 @@ export default function Checkout() {
                       <p className="text-sm text-destructive">{formErrors.city}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Order Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Any special instructions?"
-                      rows={3}
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-muted-foreground">{formData.notes.length}/500 characters</p>
-                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Any special instructions for your order..."
+                    rows={3}
+                    maxLength={500}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -498,44 +432,35 @@ export default function Checkout() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    {items.map((item) => (
-                      <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
-                        <span>
-                          {item.name} {item.variantName && `(${item.variantName})`} × {item.quantity}
-                        </span>
-                        <span>रु {(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal</span>
-                      <span>रु {cartTotal.toFixed(2)}</span>
+                  {items.map((item) => (
+                    <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
+                      <span className="truncate flex-1 mr-2">
+                        {item.name} × {item.quantity}
+                      </span>
+                      <span>रु {(item.price * item.quantity).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Shipping</span>
-                      <span>रु {shippingAmount.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
+                  ))}
                   <Separator />
-                  
-                  <div className="flex justify-between font-bold text-lg">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>रु {cartTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span>रु {shippingAmount.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-semibold">
                     <span>Total</span>
-                    <span>रु {orderTotal.toFixed(2)}</span>
+                    <span className="text-primary">रु {orderTotal.toLocaleString()}</span>
                   </div>
-
                   <Button 
                     type="submit" 
                     className="w-full" 
                     size="lg"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Processing...' : 'Place Order'}
+                    {isSubmitting ? 'Placing Order...' : 'Place Order'}
                   </Button>
                 </CardContent>
               </Card>

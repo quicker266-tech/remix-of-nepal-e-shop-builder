@@ -1,14 +1,25 @@
+/**
+ * ============================================================================
+ * STORE SETTINGS PAGE
+ * ============================================================================
+ * 
+ * Manage store information, branding, contact details, and domain settings.
+ * 
+ * ============================================================================
+ */
+
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Store, Loader2 } from 'lucide-react';
+import { Store, Loader2, ExternalLink, Globe, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
 import { toast } from 'sonner';
@@ -26,10 +37,30 @@ const settingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
+interface StoreWithDomain {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  status: string;
+  subdomain: string | null;
+  custom_domain: string | null;
+  domain_type: string | null;
+  domain_verified: boolean | null;
+}
+
 export default function StoreSettings() {
   const { currentStore, refreshStores, setCurrentStore } = useStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [storeDetails, setStoreDetails] = useState<StoreWithDomain | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -74,6 +105,7 @@ export default function StoreSettings() {
       if (error) throw error;
 
       if (data) {
+        setStoreDetails(data as unknown as StoreWithDomain);
         form.reset({
           name: data.name,
           description: data.description || '',
@@ -132,12 +164,23 @@ export default function StoreSettings() {
     }
   };
 
+  const copyToClipboard = async (url: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(label);
+      toast.success('Copied to clipboard');
+      setTimeout(() => setCopiedUrl(null), 2000);
+    } catch (err) {
+      toast.error('Failed to copy');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-success text-success-foreground">Active</Badge>;
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Active</Badge>;
       case 'pending':
-        return <Badge className="bg-warning text-warning-foreground">Pending Approval</Badge>;
+        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">Pending Approval</Badge>;
       case 'suspended':
         return <Badge variant="destructive">Suspended</Badge>;
       default:
@@ -161,6 +204,11 @@ export default function StoreSettings() {
     );
   }
 
+  // Generate URLs
+  const pathBasedUrl = `https://extendbee.com/store/${storeDetails?.slug || currentStore.slug}`;
+  const subdomainUrl = `https://${storeDetails?.subdomain || storeDetails?.slug || currentStore.slug}.extendbee.com`;
+  const isSubdomainActive = storeDetails?.domain_verified === true;
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
@@ -170,6 +218,113 @@ export default function StoreSettings() {
         </div>
         {getStatusBadge(currentStore.status)}
       </div>
+
+      {/* Domain Settings Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Store Domain
+          </CardTitle>
+          <CardDescription>Your store's web addresses and domain settings</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Default Path-based URL */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Default URL</label>
+            <div className="flex items-center gap-2">
+              <Input 
+                value={pathBasedUrl}
+                readOnly 
+                className="bg-muted font-mono text-sm"
+              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => copyToClipboard(pathBasedUrl, 'default')}
+              >
+                {copiedUrl === 'default' ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+              <a href={pathBasedUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="icon">
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This URL always works and requires no additional setup.
+            </p>
+          </div>
+
+          <Separator />
+
+          {/* Subdomain URL */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Subdomain URL</label>
+              {isSubdomainActive ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                  Active
+                </Badge>
+              ) : (
+                <Badge variant="secondary">Not Configured</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input 
+                value={subdomainUrl}
+                readOnly 
+                className="bg-muted font-mono text-sm"
+              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => copyToClipboard(subdomainUrl, 'subdomain')}
+              >
+                {copiedUrl === 'subdomain' ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+              {isSubdomainActive && (
+                <a href={subdomainUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="icon">
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </a>
+              )}
+            </div>
+            {!isSubdomainActive && (
+              <p className="text-xs text-muted-foreground">
+                Contact support to activate your custom subdomain for a cleaner URL.
+              </p>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Custom Domain (Coming Soon) */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Custom Domain</label>
+              <Badge variant="outline">Coming Soon</Badge>
+            </div>
+            <Input 
+              placeholder="yourdomain.com" 
+              disabled 
+              className="bg-muted"
+            />
+            <p className="text-xs text-muted-foreground">
+              Connect your own domain in a future update.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
