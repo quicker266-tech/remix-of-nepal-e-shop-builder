@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-01-15
+
+### Fixed - Checkout & Order System Bugs
+
+Critical fixes for checkout authentication and order linking.
+
+#### Bug 1: Orders Not Showing in Customer Account
+- **Problem**: Orders placed by logged-in customers weren't appearing in their order history
+- **Cause**: Checkout created new customer records instead of using the authenticated customer's ID
+- **Fix**: Modified `Checkout.tsx` to use `customer.customer_id` from `StoreCustomerAuthContext` when authenticated
+
+#### Bug 2: Subdomain Checkout Authentication Broken
+- **Problem**: In subdomain mode, checkout always showed "Login Required" even for logged-in customers
+- **Cause**: `Checkout.tsx` used `supabase.auth.getUser()` (platform auth) instead of store customer auth
+- **Fix**: Replaced platform auth with `useStoreCustomerAuth()` context
+
+#### Code Changes
+- Updated `src/pages/storefront/Checkout.tsx`:
+  - Replaced `supabase.auth` calls with `useStoreCustomerAuth()` hook
+  - Pre-fill checkout form with authenticated customer data (email, name, phone, address, city)
+  - Use authenticated customer's `customer_id` for order placement
+  - Guest checkout still uses `create_or_update_checkout_customer` RPC
+
+#### Behavior After Fix
+| Scenario | Before | After |
+|----------|--------|-------|
+| Subdomain checkout (logged in) | "Login Required" error | Checkout works normally |
+| Path-mode checkout (logged in) | Order not linked | Order linked to customer |
+| View orders after purchase | Empty list | Shows placed orders |
+| Guest checkout | Works | Still works (unchanged) |
+
+---
+
 ## [1.2.0] - 2026-01-15
 
 ### Added - Store-Specific Customer Authentication
