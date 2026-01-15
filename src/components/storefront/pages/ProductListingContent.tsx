@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +41,15 @@ export function ProductListingContent({ storeId, storeSlug }: ProductListingCont
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Get routing mode from context
+  const storefrontContext = useStorefrontOptional();
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Build links based on routing mode
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
   
   const searchQuery = searchParams.get('q') || '';
   const sortBy = searchParams.get('sort') || 'newest';
@@ -143,7 +153,7 @@ export function ProductListingContent({ storeId, storeSlug }: ProductListingCont
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link to={`/store/${storeSlug}`} className="hover:text-foreground">
+        <Link to={buildLink('/')} className="hover:text-foreground">
           Home
         </Link>
         <ChevronRight className="h-4 w-4" />
@@ -277,7 +287,7 @@ export function ProductListingContent({ storeId, storeSlug }: ProductListingCont
               {products.map((product) => (
                 <Link
                   key={product.id}
-                  to={`/store/${storeSlug}/product/${product.slug}`}
+                  to={buildLink(`/product/${product.slug}`)}
                   className="group"
                 >
                   <div className="aspect-square bg-muted rounded-lg overflow-hidden">
@@ -308,7 +318,7 @@ export function ProductListingContent({ storeId, storeSlug }: ProductListingCont
               {products.map((product) => (
                 <Link
                   key={product.id}
-                  to={`/store/${storeSlug}/product/${product.slug}`}
+                  to={buildLink(`/product/${product.slug}`)}
                   className="flex gap-4 p-4 bg-card rounded-lg border hover:border-primary transition-colors"
                 >
                   <div className="w-32 h-32 bg-muted rounded-lg overflow-hidden shrink-0">

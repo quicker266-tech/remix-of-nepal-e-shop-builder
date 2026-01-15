@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { useStorefrontOptional } from "@/contexts/StorefrontContext";
 
 interface Category {
   id: string;
@@ -32,6 +33,15 @@ export function CategoryGrid({ config, storeId, storeSlug }: CategoryGridProps) 
     showDescription = false,
     limit = 8,
   } = config;
+
+  // Get routing mode from context
+  const storefrontContext = useStorefrontOptional();
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Build links based on routing mode
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +102,7 @@ export function CategoryGrid({ config, storeId, storeSlug }: CategoryGridProps) 
             {categories.map((category) => (
               <Link
                 key={category.id}
-                to={`/store/${storeSlug}/page/category?cat=${category.slug}`}
+                to={buildLink(`/page/category?cat=${category.slug}`)}
                 className="group relative aspect-square rounded-lg overflow-hidden bg-muted"
               >
                 {category.image_url ? (
