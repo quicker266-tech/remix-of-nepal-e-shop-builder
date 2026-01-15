@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
 import { useStorefrontOptional } from '@/contexts/StorefrontContext';
+import { useStoreCustomerAuth } from '@/contexts/StoreCustomerAuthContext';
 import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -92,24 +93,30 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [user, setUser] = useState<any>(null);
+
+  // Use store customer auth instead of platform auth
+  const { customer, isAuthenticated, loading: authLoading } = useStoreCustomerAuth();
 
   const shippingAmount = 100; // Fixed shipping for now
   const orderTotal = storeCartTotal + shippingAmount;
 
-  // Check authentication on mount
+  // Pre-fill email from store customer auth
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setIsAuthenticated(!!user);
-      if (user?.email) {
-        setFormData(prev => ({ ...prev, email: user.email || '' }));
-      }
-    };
-    checkAuth();
-  }, []);
+    if (!authLoading && customer?.email) {
+      setFormData(prev => ({ ...prev, email: customer.email || '' }));
+    }
+    // Also pre-fill other fields if available
+    if (!authLoading && customer) {
+      setFormData(prev => ({
+        ...prev,
+        email: customer.email || prev.email,
+        fullName: customer.full_name || prev.fullName,
+        phone: customer.phone || prev.phone,
+        address: customer.address || prev.address,
+        city: customer.city || prev.city,
+      }));
+    }
+  }, [authLoading, customer]);
 
   const generateOrderNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
@@ -165,46 +172,39 @@ export default function Checkout() {
         throw new Error('Store not found');
       }
 
-      // Step 2: Get or create customer using the secure RPC
-      // First, try to get existing customer or create via the checkout RPC
-      const { data: customerId, error: customerError } = await supabase
-        .rpc('create_or_update_checkout_customer', {
-          p_store_id: storeData.id,
-          p_email: validatedData.email,
-          p_full_name: validatedData.fullName,
-          p_phone: validatedData.phone,
-          p_address: validatedData.address,
-          p_city: validatedData.city,
-        });
-
-      if (customerError) throw customerError;
-
-      // Link customer to user if authenticated
-      if (user?.id && customerId) {
-        // Update customer with user_id for account linking
+      // Step 2: Get or create customer
+      // If user is logged in via store customer auth, use their customer_id directly
+      // Otherwise, create/update customer via checkout RPC
+      let customerId: string;
+      
+      if (isAuthenticated && customer?.customer_id) {
+        // Use existing customer_id from store customer auth
+        customerId = customer.customer_id;
+        
+        // Update customer profile with checkout form data
         await supabase
           .from('customers')
-          .update({ user_id: user.id })
-          .eq('id', customerId)
-          .is('user_id', null); // Only if not already linked
-        
-        // Create store_customers link if not exists
-        const { data: existingLink } = await supabase
-          .from('store_customers')
-          .select('id')
-          .eq('store_id', storeData.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (!existingLink) {
-          await supabase
-            .from('store_customers')
-            .insert({
-              store_id: storeData.id,
-              user_id: user.id,
-              customer_id: customerId,
-            });
-        }
+          .update({
+            full_name: validatedData.fullName,
+            phone: validatedData.phone,
+            address: validatedData.address,
+            city: validatedData.city,
+          })
+          .eq('id', customerId);
+      } else {
+        // Guest checkout - create or update customer via RPC
+        const { data: guestCustomerId, error: customerError } = await supabase
+          .rpc('create_or_update_checkout_customer', {
+            p_store_id: storeData.id,
+            p_email: validatedData.email,
+            p_full_name: validatedData.fullName,
+            p_phone: validatedData.phone,
+            p_address: validatedData.address,
+            p_city: validatedData.city,
+          });
+
+        if (customerError) throw customerError;
+        customerId = guestCustomerId;
       }
 
       // Step 3: Prepare order items for the RPC function
@@ -299,8 +299,20 @@ export default function Checkout() {
     );
   }
 
+  // Loading state for auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Auth Required View
-  if (isAuthenticated === false) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
