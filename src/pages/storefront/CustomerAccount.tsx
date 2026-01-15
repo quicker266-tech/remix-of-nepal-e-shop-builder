@@ -43,7 +43,7 @@ export default function CustomerAccount() {
 
   useEffect(() => {
     checkAuthAndFetchData();
-  }, []);
+  }, [store?.id]);
 
   const checkAuthAndFetchData = async () => {
     try {
@@ -65,25 +65,30 @@ export default function CustomerAccount() {
       
       setProfile(profileData);
       
-      // Fetch recent orders for this store
+      // Fetch recent orders for this store using a proper two-step query
       if (store?.id) {
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select('id, order_number, status, total, created_at')
+        // Step 1: Get customer ID for this store and user
+        const { data: customer } = await supabase
+          .from('customers')
+          .select('id')
           .eq('store_id', store.id)
-          .eq('customer_id', 
-            (await supabase
-              .from('customers')
-              .select('id')
-              .eq('store_id', store.id)
-              .eq('user_id', user.id)
-              .maybeSingle()
-            ).data?.id || ''
-          )
-          .order('created_at', { ascending: false })
-          .limit(5);
+          .eq('user_id', user.id)
+          .maybeSingle();
         
-        setRecentOrders(ordersData || []);
+        // Step 2: Fetch orders only if customer exists
+        if (customer?.id) {
+          const { data: ordersData } = await supabase
+            .from('orders')
+            .select('id, order_number, status, total, created_at')
+            .eq('store_id', store.id)
+            .eq('customer_id', customer.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          
+          setRecentOrders(ordersData || []);
+        } else {
+          setRecentOrders([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching account data:', error);

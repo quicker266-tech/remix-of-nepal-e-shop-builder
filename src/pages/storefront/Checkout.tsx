@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { sanitizeHtml } from '@/lib/sanitize';
-import type { Json } from '@/integrations/supabase/types';
+// Removed unused Json import - now using RPC for order placement
 
 // Zod schema for checkout form validation
 const checkoutSchema = z.object({
@@ -144,7 +144,7 @@ export default function Checkout() {
       return;
     }
 
-    if (items.length === 0) {
+    if (storeItems.length === 0) {
       toast.error('Your cart is empty');
       return;
     }
@@ -165,7 +165,8 @@ export default function Checkout() {
         throw new Error('Store not found');
       }
 
-      // Step 2: Create or update customer
+      // Step 2: Get or create customer using the secure RPC
+      // First, try to get existing customer or create via the checkout RPC
       const { data: customerId, error: customerError } = await supabase
         .rpc('create_or_update_checkout_customer', {
           p_store_id: storeData.id,
@@ -178,39 +179,36 @@ export default function Checkout() {
 
       if (customerError) throw customerError;
 
-      // Step 3: Create order
-      const newOrderNumber = generateOrderNumber();
-      const shippingAddress = {
-        full_name: validatedData.fullName,
-        address: validatedData.address,
-        city: validatedData.city,
-        phone: validatedData.phone,
-      };
+      // Link customer to user if authenticated
+      if (user?.id && customerId) {
+        // Update customer with user_id for account linking
+        await supabase
+          .from('customers')
+          .update({ user_id: user.id })
+          .eq('id', customerId)
+          .is('user_id', null); // Only if not already linked
+        
+        // Create store_customers link if not exists
+        const { data: existingLink } = await supabase
+          .from('store_customers')
+          .select('id')
+          .eq('store_id', storeData.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (!existingLink) {
+          await supabase
+            .from('store_customers')
+            .insert({
+              store_id: storeData.id,
+              user_id: user.id,
+              customer_id: customerId,
+            });
+        }
+      }
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          store_id: storeData.id,
-          customer_id: customerId,
-          order_number: newOrderNumber,
-          status: 'pending',
-          subtotal: cartTotal,
-          shipping_amount: shippingAmount,
-          discount_amount: 0,
-          tax_amount: 0,
-          total: orderTotal,
-          shipping_address: shippingAddress as unknown as Json,
-          billing_address: shippingAddress as unknown as Json,
-          notes: sanitizedNotes || null,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Step 4: Create order items
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
+      // Step 3: Prepare order items for the RPC function
+      const orderItemsPayload = storeItems.map((item) => ({
         product_id: item.productId,
         variant_id: item.variantId || null,
         product_name: item.name,
@@ -218,35 +216,38 @@ export default function Checkout() {
         sku: null,
         quantity: item.quantity,
         unit_price: item.price,
-        total_price: item.price * item.quantity,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+      // Step 4: Create order using the secure RPC function
+      // This handles order creation, order items, and customer stats atomically
+      const shippingAddress = {
+        full_name: validatedData.fullName,
+        address: validatedData.address,
+        city: validatedData.city,
+        phone: validatedData.phone,
+      };
 
-      if (itemsError) throw itemsError;
+      const { data: orderResult, error: orderError } = await supabase
+        .rpc('place_checkout_order', {
+          p_store_id: storeData.id,
+          p_customer_id: customerId,
+          p_items: orderItemsPayload,
+          p_shipping_address: shippingAddress,
+          p_shipping_amount: shippingAmount,
+          p_notes: sanitizedNotes || null,
+        });
 
-      // Step 5: Update customer stats
-      const { data: currentCustomer } = await supabase
-        .from('customers')
-        .select('total_orders, total_spent')
-        .eq('id', customerId)
-        .single();
-
-      const newTotalOrders = (currentCustomer?.total_orders || 0) + 1;
-      const newTotalSpent = (currentCustomer?.total_spent || 0) + orderTotal;
-
-      await supabase
-        .from('customers')
-        .update({
-          total_orders: newTotalOrders,
-          total_spent: newTotalSpent,
-        })
-        .eq('id', customerId);
+      if (orderError) throw orderError;
+      
+      // Check RPC result
+      const result = orderResult as { success: boolean; order_number?: string; error?: string };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to place order');
+      }
 
       // Success!
-      setOrderNumber(newOrderNumber);
+      setOrderNumber(result.order_number || 'N/A');
       setOrderComplete(true);
       clearCart();
       toast.success('Order placed successfully!');
