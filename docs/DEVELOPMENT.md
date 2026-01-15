@@ -402,7 +402,7 @@ This project follows [Semantic Versioning](https://semver.org/):
 | **Minor (0.X.0)** | New features (e.g., Phase 3 storefront) |
 | **Patch (0.0.X)** | Bug fixes, minor improvements |
 
-### Current Version: 0.9.0
+### Current Version: 1.0.0
 - Phase 1: Store Builder editor ✅
 - Phase 2: Theme integration ✅
 - Phase 3: Customer storefront renderer ✅
@@ -411,7 +411,144 @@ This project follows [Semantic Versioning](https://semver.org/):
 - Phase 3.8: Built-in page content + Section permissions ✅
 - Phase 3.9: Product reviews table ✅
 - Phase 4: Header/footer auto-initialization ✅
-- Phase 5: Polish, custom domains (TODO)
+- Phase 5: Custom domain & subdomain support ✅
+- Phase 6: Store-specific customer authentication ✅
+
+---
+
+## Domain & Subdomain Support
+
+### Overview
+The platform supports multiple domain modes for storefronts:
+1. **Path-based routing**: `/store/{storeSlug}/...` (default)
+2. **Subdomain routing**: `{storeSlug}.extendbee.com/...`
+3. **Custom domain**: `store.customdomain.com` (future)
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `src/lib/subdomain.ts` | Domain detection utilities |
+| `src/contexts/StorefrontContext.tsx` | Unified store data provider |
+| `src/routes/StorefrontRoutes.tsx` | Route configuration |
+
+### Domain Utilities (subdomain.ts)
+
+```typescript
+// Check if on a store subdomain
+isStorefrontSubdomain() // => true/false
+
+// Get store slug from subdomain
+getStoreSlugFromSubdomain() // => 'bombay' or null
+
+// Check if on main platform domain
+isMainDomain() // => true/false
+
+// Build correct URL based on routing mode
+buildStoreUrl('bombay', '/product/xyz')
+// Subdomain mode: '/product/xyz'
+// Path mode: '/store/bombay/product/xyz'
+```
+
+### Configuration
+Add production domains to `SUBDOMAIN_ENABLED_DOMAINS` in `subdomain.ts`:
+```typescript
+const SUBDOMAIN_ENABLED_DOMAINS = [
+  'extendbee.com',
+  'nepal-shop-nest.lovable.app',
+];
+```
+
+Reserved subdomains (www, admin, api, etc.) are excluded from store detection.
+
+### Storefront Context
+
+The `StorefrontContext` provides unified store data to all storefront pages, reducing duplicate API calls.
+
+```typescript
+// Access store data in any storefront component
+const { 
+  store,           // Store details
+  storeId,         // Store UUID
+  storeSlug,       // Store slug
+  theme,           // Active theme
+  headerFooter,    // Header/footer config
+  navItems,        // Navigation items
+  loading,         // Loading state
+  error,           // Error message
+  isSubdomainMode, // Routing mode
+  refetch,         // Refetch data
+} = useStorefront();
+```
+
+---
+
+## Store-Specific Customer Authentication
+
+### Overview
+Each store has its own isolated customer database. Customers register and log in per-store, not globally. This allows the same email to have different accounts in different stores.
+
+### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `store_customer_accounts` | Email + password hash per store |
+| `store_customer_sessions` | Token-based sessions with expiry |
+
+### Authentication Flow
+
+```
+1. Customer registers → store_customer_accounts record created
+2. Customer logs in → password verified, session token generated
+3. Session stored → store_customer_sessions with 30-day expiry
+4. Token stored → localStorage per store (storeId_customer_token)
+5. Validate session → on page load, verify token via RPC
+6. Logout → session deleted from database + localStorage
+```
+
+### RPC Functions
+
+| Function | Purpose |
+|----------|---------|
+| `store_customer_register` | Create account with hashed password |
+| `store_customer_login` | Verify password, create session |
+| `store_customer_validate_session` | Check token validity |
+| `store_customer_logout` | Delete session |
+| `store_customer_update_profile` | Update customer details |
+| `store_customer_get_orders` | Fetch customer's orders |
+
+### Edge Function: store-customer-auth
+
+Handles secure password hashing using SHA-256. Located at `supabase/functions/store-customer-auth/`.
+
+**Endpoints:**
+- `POST /register` - Hash password, call register RPC
+- `POST /login` - Hash password, call login RPC
+- `POST /validate` - Validate session token
+- `POST /logout` - Invalidate session
+- `GET /profile` - Get customer profile
+- `PUT /profile` - Update profile
+- `GET /orders` - Get customer orders
+
+### Context Usage
+
+```typescript
+// In storefront components
+const { 
+  customer,      // Current customer data
+  isLoggedIn,    // Authentication status
+  loading,       // Loading state
+  login,         // Login function
+  register,      // Register function
+  logout,        // Logout function
+  updateProfile, // Update profile function
+  refreshProfile // Refresh customer data
+} = useStoreCustomerAuth();
+```
+
+### Store Isolation
+- Customer tokens are scoped to store ID: `{storeId}_customer_token`
+- Same email can exist in multiple stores with different passwords
+- Orders are linked to store-specific customer records
 
 ---
 
@@ -538,3 +675,49 @@ ORDER BY created_at DESC;
 | `page_sections` | Public (visible) | Store members | Store members | Store members |
 | `products` | Public (active) | Store members | Store members | Store members |
 | `orders` | Store members | Authenticated | Store members | - |
+| `store_customer_accounts` | Store-scoped | Via RPC only | Via RPC only | - |
+| `store_customer_sessions` | Store-scoped | Via RPC only | Via RPC only | Via RPC only |
+
+---
+
+## Contexts Reference
+
+| Context | File | Purpose |
+|---------|------|---------|
+| `AuthContext` | `src/contexts/AuthContext.tsx` | Platform user authentication (store owners) |
+| `CartContext` | `src/contexts/CartContext.tsx` | Shopping cart state per store |
+| `StoreContext` | `src/contexts/StoreContext.tsx` | Current store selection (dashboard) |
+| `StorefrontContext` | `src/contexts/StorefrontContext.tsx` | Unified storefront data (theme, nav, etc.) |
+| `StoreCustomerAuthContext` | `src/contexts/StoreCustomerAuthContext.tsx` | Store-specific customer authentication |
+
+---
+
+## Key Hooks
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useStoreBuilder` | `src/hooks/useStoreBuilder.ts` | Store builder data fetching |
+| `useStoreLinks` | `src/hooks/useStoreLinks.ts` | Generate store-aware URLs |
+| `useStorefront` | `src/contexts/StorefrontContext.tsx` | Access storefront context |
+| `useStoreCustomerAuth` | `src/contexts/StoreCustomerAuthContext.tsx` | Customer auth operations |
+
+---
+
+## File Structure: Customer Auth System
+
+```
+src/
+├── contexts/
+│   └── StoreCustomerAuthContext.tsx  # Customer auth provider + hook
+├── pages/storefront/
+│   ├── CustomerAuth.tsx              # Login/Register forms
+│   ├── CustomerAccount.tsx           # Account dashboard
+│   ├── CustomerProfile.tsx           # Profile management
+│   └── CustomerOrders.tsx            # Order history
+supabase/
+├── functions/
+│   └── store-customer-auth/
+│       └── index.ts                  # Password hashing + auth endpoints
+└── migrations/
+    └── [timestamp]_store_customer_auth.sql  # Tables + RPC functions
+```
