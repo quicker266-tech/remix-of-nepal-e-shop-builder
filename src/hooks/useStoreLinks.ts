@@ -43,6 +43,18 @@ interface StoreLinks {
   /** Order tracking */
   orderTracking: (orderId?: string) => string;
   
+  /** Customer authentication */
+  auth: (returnTo?: string) => string;
+  
+  /** Customer account dashboard */
+  account: () => string;
+  
+  /** Customer orders */
+  orders: () => string;
+  
+  /** Customer profile */
+  profile: () => string;
+  
   /** Build any custom path */
   custom: (path: string) => string;
 }
@@ -96,6 +108,19 @@ export function useStoreLinks(): StoreLinks {
       return buildLink(trackingPath);
     },
     
+    auth: (returnTo?: string) => {
+      const authPath = returnTo
+        ? `/auth?returnTo=${encodeURIComponent(returnTo)}`
+        : '/auth';
+      return buildLink(authPath);
+    },
+    
+    account: () => buildLink('/account'),
+    
+    orders: () => buildLink('/account/orders'),
+    
+    profile: () => buildLink('/account/profile'),
+    
     custom: (path: string) => buildLink(path),
   };
 }
@@ -141,6 +166,15 @@ export function useStoreLinksWithFallback(fallbackStoreSlug: string): StoreLinks
         : '/order-tracking';
       return buildLink(trackingPath);
     },
+    auth: (returnTo?: string) => {
+      const authPath = returnTo
+        ? `/auth?returnTo=${encodeURIComponent(returnTo)}`
+        : '/auth';
+      return buildLink(authPath);
+    },
+    account: () => buildLink('/account'),
+    orders: () => buildLink('/account/orders'),
+    profile: () => buildLink('/account/profile'),
     custom: (path: string) => buildLink(path),
   };
 }

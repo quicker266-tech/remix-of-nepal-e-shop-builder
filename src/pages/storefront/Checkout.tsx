@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,6 +75,10 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { items, cartTotal, clearCart } = useCart();
   
+  // Filter items by current store
+  const storeItems = items.filter(item => item.storeSlug === storeSlug);
+  const storeCartTotal = storeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -88,9 +92,24 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   const shippingAmount = 100; // Fixed shipping for now
-  const orderTotal = cartTotal + shippingAmount;
+  const orderTotal = storeCartTotal + shippingAmount;
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsAuthenticated(!!user);
+      if (user?.email) {
+        setFormData(prev => ({ ...prev, email: user.email || '' }));
+      }
+    };
+    checkAuth();
+  }, []);
 
   const generateOrderNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
@@ -264,16 +283,41 @@ export default function Checkout() {
     );
   }
 
-  // Empty Cart View
-  if (items.length === 0) {
+  // Empty Cart View (for this store)
+  if (storeItems.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-xl font-bold mb-2">Your cart is empty</h1>
+          <p className="text-muted-foreground mb-4">Add items from this store to checkout</p>
           <Link to={links.home()}>
             <Button>Back to Store</Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Auth Required View
+  if (isAuthenticated === false) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle>Login Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Please login or create an account to complete your order.
+            </p>
+            <Link to={links.auth('checkout')}>
+              <Button className="w-full">Login / Register</Button>
+            </Link>
+            <Link to={links.cart()}>
+              <Button variant="outline" className="w-full">Back to Cart</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -432,7 +476,7 @@ export default function Checkout() {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {items.map((item) => (
+                  {storeItems.map((item) => (
                     <div key={`${item.productId}-${item.variantId}`} className="flex justify-between text-sm">
                       <span className="truncate flex-1 mr-2">
                         {item.name} × {item.quantity}
@@ -443,7 +487,7 @@ export default function Checkout() {
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>रु {cartTotal.toLocaleString()}</span>
+                    <span>रु {storeCartTotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>

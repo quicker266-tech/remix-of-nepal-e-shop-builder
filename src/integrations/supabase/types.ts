@@ -741,6 +741,55 @@ export type Database = {
         }
         Relationships: []
       }
+      store_customers: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_customers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_extensions: {
         Row: {
           config: Json | null
@@ -1269,6 +1318,18 @@ export type Database = {
         }
         Returns: string
       }
+      get_or_create_store_customer: {
+        Args: {
+          p_address?: string
+          p_city?: string
+          p_email: string
+          p_full_name?: string
+          p_phone?: string
+          p_store_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_standard_pages_for_business: {
         Args: { p_business_category?: string; p_business_type: string }
         Returns: {
@@ -1295,6 +1356,17 @@ export type Database = {
         Returns: number
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      place_checkout_order: {
+        Args: {
+          p_customer_id: string
+          p_items: Json
+          p_notes?: string
+          p_shipping_address: Json
+          p_shipping_amount?: number
+          p_store_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "super_admin" | "store_admin" | "store_staff" | "customer"

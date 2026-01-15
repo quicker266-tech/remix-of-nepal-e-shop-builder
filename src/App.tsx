@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -54,6 +54,10 @@ import ProductDetail from "./pages/storefront/ProductDetail";
 import StoreCatalog from "./pages/storefront/StoreCatalog";
 import Cart from "./pages/storefront/Cart";
 import Checkout from "./pages/storefront/Checkout";
+import CustomerAuth from "./pages/storefront/CustomerAuth";
+import CustomerAccount from "./pages/storefront/CustomerAccount";
+import CustomerOrders from "./pages/storefront/CustomerOrders";
+import CustomerProfile from "./pages/storefront/CustomerProfile";
 
 const queryClient = new QueryClient();
 
@@ -71,8 +75,27 @@ function SubdomainStorefrontRoutes() {
       <Route path="/product/:productSlug" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/auth" element={<CustomerAuth />} />
+      <Route path="/account" element={<CustomerAccount />} />
+      <Route path="/account/orders" element={<CustomerOrders />} />
+      <Route path="/account/profile" element={<CustomerProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+  );
+}
+
+/**
+ * Path-mode storefront wrapper
+ * Provides store context and cart isolation for /store/:storeSlug routes
+ */
+function PathModeStorefrontWrapper() {
+  const { storeSlug } = useParams();
+  return (
+    <StorefrontProvider storeSlugOverride={storeSlug} forceSubdomainMode={false}>
+      <CartProvider storeSlug={storeSlug}>
+        <Outlet />
+      </CartProvider>
+    </StorefrontProvider>
   );
 }
 
@@ -119,13 +142,19 @@ const App = () => {
                   <Route path="/auth" element={<AuthPage />} />
                   
                   {/* Customer Storefront (path-based - legacy & fallback) */}
-                  <Route path="/store/:storeSlug" element={<StorePage />} />
-                  <Route path="/store/:storeSlug/page/:pageSlug" element={<StorePage />} />
-                  <Route path="/store/:storeSlug/catalog" element={<StoreCatalog />} />
-                  <Route path="/store/:storeSlug/categories" element={<StorePage />} />
-                  <Route path="/store/:storeSlug/product/:productSlug" element={<ProductDetail />} />
-                  <Route path="/store/:storeSlug/cart" element={<Cart />} />
-                  <Route path="/store/:storeSlug/checkout" element={<Checkout />} />
+                  <Route path="/store/:storeSlug" element={<PathModeStorefrontWrapper />}>
+                    <Route index element={<StorePage />} />
+                    <Route path="page/:pageSlug" element={<StorePage />} />
+                    <Route path="catalog" element={<StoreCatalog />} />
+                    <Route path="categories" element={<StorePage />} />
+                    <Route path="product/:productSlug" element={<ProductDetail />} />
+                    <Route path="cart" element={<Cart />} />
+                    <Route path="checkout" element={<Checkout />} />
+                    <Route path="auth" element={<CustomerAuth />} />
+                    <Route path="account" element={<CustomerAccount />} />
+                    <Route path="account/orders" element={<CustomerOrders />} />
+                    <Route path="account/profile" element={<CustomerProfile />} />
+                  </Route>
                   
                   {/* Tenant Dashboard */}
                   <Route path="/dashboard" element={<DashboardLayout />}>
