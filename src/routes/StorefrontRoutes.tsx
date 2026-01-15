@@ -14,7 +14,7 @@
 
 import { Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+import { BeeLoader } from '@/components/ui/bee-loader';
 
 // Lazy load storefront pages for better performance
 const StorePage = lazy(() => import('@/pages/storefront/StorePage'));
@@ -24,11 +24,11 @@ const Checkout = lazy(() => import('@/pages/storefront/Checkout'));
 const StoreCatalog = lazy(() => import('@/pages/storefront/StoreCatalog'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
-// Loading fallback
+// Loading fallback with bee animation
 function LoadingFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <BeeLoader size="lg" text="Loading store..." />
     </div>
   );
 }
