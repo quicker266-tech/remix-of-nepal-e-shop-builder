@@ -4,7 +4,8 @@
  * ============================================================================
  * 
  * Store-specific customer login/register page.
- * Customers can create accounts tied to a specific store.
+ * Uses the store-specific auth system (NOT platform auth.users).
+ * Each store has its own independent customer accounts.
  * 
  * ============================================================================
  */
@@ -19,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
-import { supabase } from '@/integrations/supabase/client';
+import { useStoreCustomerAuth } from '@/contexts/StoreCustomerAuthContext';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -49,11 +50,13 @@ export default function CustomerAuth() {
   const store = storefrontContext?.store;
   const links = useStoreLinksWithFallback(storeSlug || '');
   
+  // Use store-specific customer auth
+  const { isAuthenticated, loading: authLoading, login, register } = useStoreCustomerAuth();
+  
   const returnTo = searchParams.get('returnTo') || 'home';
   
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   
   // Login form
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -68,18 +71,12 @@ export default function CustomerAuth() {
   });
   const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({});
 
-  // Check if user is already logged in
+  // Redirect if already authenticated
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // User is logged in, redirect to return destination
-        handleRedirect();
-      }
-      setCheckingAuth(false);
-    };
-    checkAuth();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      handleRedirect();
+    }
+  }, [authLoading, isAuthenticated]);
 
   const handleRedirect = () => {
     if (returnTo === 'checkout') {
@@ -108,16 +105,11 @@ export default function CustomerAuth() {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
-      });
+      const { success, error } = await login(loginData.email, loginData.password);
       
-      if (error) throw error;
-      
-      // Link user to store if not already linked
-      if (store?.id) {
-        await linkUserToStore(store.id);
+      if (!success) {
+        toast.error(error || 'Failed to login');
+        return;
       }
       
       toast.success('Logged in successfully!');
@@ -147,35 +139,19 @@ export default function CustomerAuth() {
     setLoading(true);
     
     try {
-      // Register user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: registerData.email,
-        password: registerData.password,
-        options: {
-          data: {
-            full_name: registerData.fullName,
-          },
-          emailRedirectTo: window.location.origin,
-        },
-      });
+      const { success, error } = await register(
+        registerData.email, 
+        registerData.password,
+        registerData.fullName
+      );
       
-      if (authError) throw authError;
-      
-      if (authData.user) {
-        // Create profile
-        await supabase.from('profiles').upsert({
-          user_id: authData.user.id,
-          full_name: registerData.fullName,
-        });
-        
-        // Link user to store as customer
-        if (store?.id) {
-          await linkUserToStore(store.id, registerData.fullName);
-        }
-        
-        toast.success('Account created successfully!');
-        handleRedirect();
+      if (!success) {
+        toast.error(error || 'Failed to create account');
+        return;
       }
+      
+      toast.success('Account created successfully!');
+      handleRedirect();
     } catch (error: any) {
       console.error('Registration error:', error);
       toast.error(error.message || 'Failed to create account');
@@ -184,24 +160,7 @@ export default function CustomerAuth() {
     }
   };
 
-  const linkUserToStore = async (storeId: string, fullName?: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      // Use the secure backend function to create/get store customer
-      await supabase.rpc('get_or_create_store_customer', {
-        p_store_id: storeId,
-        p_user_id: user.id,
-        p_email: user.email || '',
-        p_full_name: fullName || user.user_metadata?.full_name || null,
-      });
-    } catch (error) {
-      console.error('Error linking user to store:', error);
-    }
-  };
-
-  if (checkingAuth) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

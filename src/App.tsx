@@ -22,6 +22,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { StorefrontProvider } from "@/contexts/StorefrontContext";
+import { StoreCustomerAuthProvider } from "@/contexts/StoreCustomerAuthContext";
 import { getStoreSlugFromSubdomain, isStorefrontSubdomain } from "@/lib/subdomain";
 
 import LandingPage from "./pages/LandingPage";
@@ -92,9 +93,11 @@ function PathModeStorefrontWrapper() {
   const { storeSlug } = useParams();
   return (
     <StorefrontProvider storeSlugOverride={storeSlug} forceSubdomainMode={false}>
-      <CartProvider storeSlug={storeSlug}>
-        <Outlet />
-      </CartProvider>
+      <StoreCustomerAuthProvider>
+        <CartProvider storeSlug={storeSlug}>
+          <Outlet />
+        </CartProvider>
+      </StoreCustomerAuthProvider>
     </StorefrontProvider>
   );
 }
@@ -117,9 +120,11 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <StorefrontProvider storeSlugOverride={subdomainSlug} forceSubdomainMode={true}>
-              <CartProvider storeSlug={subdomainSlug}>
-                <SubdomainStorefrontRoutes />
-              </CartProvider>
+              <StoreCustomerAuthProvider>
+                <CartProvider storeSlug={subdomainSlug}>
+                  <SubdomainStorefrontRoutes />
+                </CartProvider>
+              </StoreCustomerAuthProvider>
             </StorefrontProvider>
           </BrowserRouter>
         </TooltipProvider>
