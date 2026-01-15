@@ -251,10 +251,12 @@ export function StorefrontHeader({ store, headerConfig, navItems, isSubdomainMod
             )}
             
             {headerConfig.showAccount && (
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-                <span className="sr-only">Account</span>
-              </Button>
+              <Link to={buildStoreUrl('/account')}>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                  <span className="sr-only">Account</span>
+                </Button>
+              </Link>
             )}
             
             {headerConfig.showCart && (

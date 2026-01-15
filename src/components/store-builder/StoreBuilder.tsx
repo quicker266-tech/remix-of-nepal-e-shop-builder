@@ -21,7 +21,7 @@
  * ============================================================================
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/contexts/StoreContext';
 import { useStorePages, usePageSections, useStoreTheme, useStoreHeaderFooter, useStoreNavigation } from '@/hooks/useStoreBuilder';
 import { StorePage, PageSection, EditorState } from './types';
@@ -89,17 +89,30 @@ export function StoreBuilder() {
   // EFFECTS: Store Change Detection
   // ==========================================================================
   
+  // Track previous store ID to detect store changes
+  const previousStoreIdRef = useRef<string | null>(null);
+  
   // Reset editor state when store changes to prevent cross-store data leakage
   useEffect(() => {
-    setActivePage(null);
-    setEditorState({
-      selectedSectionId: null,
-      isDragging: false,
-      previewMode: 'desktop',
-      showGrid: false,
-      zoom: 100,
-    });
-    setActiveTab('sections');
+    const currentStoreId = currentStore?.id || null;
+    const previousStoreId = previousStoreIdRef.current;
+    
+    // Only reset if store actually changed (not on initial mount with same store)
+    if (previousStoreId !== null && previousStoreId !== currentStoreId) {
+      console.log('[Store Builder] Store changed from', previousStoreId, 'to', currentStoreId, '- resetting state');
+      setActivePage(null);
+      setEditorState({
+        selectedSectionId: null,
+        isDragging: false,
+        previewMode: 'desktop',
+        showGrid: false,
+        zoom: 100,
+      });
+      setActiveTab('sections');
+    }
+    
+    // Update ref for next comparison
+    previousStoreIdRef.current = currentStoreId;
   }, [currentStore?.id]);
 
   // ==========================================================================

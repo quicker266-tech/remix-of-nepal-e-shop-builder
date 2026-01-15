@@ -281,9 +281,16 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Clear sections immediately when pageId or storeId changes
+  useEffect(() => {
+    console.log('[Section Isolation] Clearing sections - pageId:', pageId, 'storeId:', storeId);
+    setSections([]);
+    setLoading(true);
+  }, [pageId, storeId]);
+
   const fetchSections = useCallback(async () => {
-    // Clear sections immediately when no pageId to prevent stale data
-    if (!pageId) {
+    // Clear sections immediately when no pageId or storeId to prevent stale data
+    if (!pageId || !storeId) {
       setSections([]);
       setLoading(false);
       return;
@@ -294,14 +301,31 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
       setSections([]);
       setLoading(true);
       
+      // Fetch sections with store validation
       const { data, error } = await supabase
         .from('page_sections')
-        .select('*')
+        .select('*, page:store_pages!inner(store_id)')
         .eq('page_id', pageId)
         .order('sort_order', { ascending: true });
 
       if (error) throw error;
-      setSections(data as unknown as PageSection[]);
+      
+      // CRITICAL: Validate sections belong to current store
+      const validatedSections = (data || []).filter((section: any) => {
+        const sectionStoreId = section.page?.store_id;
+        if (sectionStoreId && sectionStoreId !== storeId) {
+          console.warn('[Section Isolation] Filtered out section from wrong store:', section.id);
+          return false;
+        }
+        return true;
+      }).map((section: any) => {
+        // Remove the joined page data
+        const { page, ...sectionData } = section;
+        return sectionData;
+      });
+      
+      console.log('[Section Isolation] Loaded sections for store:', storeId, 'count:', validatedSections.length);
+      setSections(validatedSections as unknown as PageSection[]);
     } catch (error) {
       console.error('Error fetching sections:', error);
       toast({ title: 'Error loading sections', variant: 'destructive' });
@@ -309,7 +333,7 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
     } finally {
       setLoading(false);
     }
-  }, [pageId, toast]);
+  }, [pageId, storeId, toast]);
 
   const addSection = async (sectionType: SectionType, pageType?: PageType, insertIndex?: number) => {
     if (!pageId || !storeId) return null;
