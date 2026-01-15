@@ -38,7 +38,7 @@ export default function StoreSwitcher() {
       <div className="p-4 border-b border-sidebar-border">
         <Button
           variant="outline"
-          className="w-full justify-start bg-white/10 border-white/20 text-sidebar-foreground hover:bg-white/20"
+          className="w-full justify-start bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
           onClick={() => navigate('/dashboard/create-store')}
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -56,13 +56,16 @@ export default function StoreSwitcher() {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-white/10 border-white/20 text-sidebar-foreground hover:bg-white/20 hover:text-sidebar-foreground"
+            className="w-full justify-between bg-sidebar-primary/10 border-sidebar-primary/30 text-sidebar-foreground hover:bg-sidebar-primary/20 hover:border-sidebar-primary/50 transition-all"
           >
             <div className="flex items-center gap-2 truncate">
-              <div className="w-6 h-6 bg-sidebar-primary rounded flex items-center justify-center flex-shrink-0">
-                <Store className="w-3 h-3 text-sidebar-primary-foreground" />
+              <div className="w-7 h-7 bg-sidebar-primary rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Store className="w-4 h-4 text-sidebar-primary-foreground" />
               </div>
-              <span className="truncate text-sidebar-foreground">{currentStore?.name || 'Select store'}</span>
+              <div className="flex flex-col items-start truncate">
+                <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60 font-medium">Current Store</span>
+                <span className="truncate font-semibold text-sidebar-foreground">{currentStore?.name || 'Select store'}</span>
+              </div>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-sidebar-foreground/50" />
           </Button>
