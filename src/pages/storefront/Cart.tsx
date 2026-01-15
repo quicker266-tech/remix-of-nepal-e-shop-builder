@@ -34,7 +34,8 @@ export default function Cart() {
   const navigate = useNavigate();
   const { items, updateQuantity, removeFromCart, clearCart, cartTotal } = useCart();
 
-  const storeItems = items.filter(item => true); // In real app, filter by store
+  // Filter items by current store slug to prevent cross-store cart bleeding
+  const storeItems = items.filter(item => item.storeSlug === storeSlug);
 
   if (storeItems.length === 0) {
     return (

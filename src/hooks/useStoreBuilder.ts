@@ -282,9 +282,18 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
   const { toast } = useToast();
 
   const fetchSections = useCallback(async () => {
-    if (!pageId) return;
+    // Clear sections immediately when no pageId to prevent stale data
+    if (!pageId) {
+      setSections([]);
+      setLoading(false);
+      return;
+    }
 
     try {
+      // Clear sections before fetching to prevent stale data from previous page
+      setSections([]);
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('page_sections')
         .select('*')
@@ -296,6 +305,7 @@ export function usePageSections(pageId: string | undefined, storeId: string | un
     } catch (error) {
       console.error('Error fetching sections:', error);
       toast({ title: 'Error loading sections', variant: 'destructive' });
+      setSections([]); // Clear on error too
     } finally {
       setLoading(false);
     }

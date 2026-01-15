@@ -85,6 +85,7 @@ const App = () => {
   const isSubdomain = isStorefrontSubdomain();
 
   // SUBDOMAIN MODE: Render storefront routes only
+  // Pass storeSlug to CartProvider for store-specific cart isolation
   if (isSubdomain && subdomainSlug) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -93,7 +94,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <StorefrontProvider storeSlugOverride={subdomainSlug} forceSubdomainMode={true}>
-              <CartProvider>
+              <CartProvider storeSlug={subdomainSlug}>
                 <SubdomainStorefrontRoutes />
               </CartProvider>
             </StorefrontProvider>
