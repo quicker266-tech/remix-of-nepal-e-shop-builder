@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useStorefrontOptional } from "@/contexts/StorefrontContext";
 
 interface Product {
   id: string;
@@ -36,6 +37,15 @@ export function FeaturedProducts({ config, storeId, storeSlug }: FeaturedProduct
     showPrices = true,
     showAddToCart = true,
   } = config;
+
+  // Get routing mode from context
+  const storefrontContext = useStorefrontOptional();
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Build links based on routing mode
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +112,7 @@ export function FeaturedProducts({ config, storeId, storeSlug }: FeaturedProduct
 
               return (
                 <div key={product.id} className="group">
-                  <Link to={`/store/${storeSlug}/product/${product.slug}`}>
+                  <Link to={buildLink(`/product/${product.slug}`)}>
                     <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">
                       <img
                         src={imageUrl}

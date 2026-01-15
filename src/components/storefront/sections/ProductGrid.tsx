@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { useStorefrontOptional } from "@/contexts/StorefrontContext";
 
 interface Product {
   id: string;
@@ -38,6 +39,15 @@ export function ProductGrid({ config, storeId, storeSlug }: ProductGridProps) {
     categoryId,
     sortBy = "created_at",
   } = config;
+
+  // Get routing mode from context
+  const storefrontContext = useStorefrontOptional();
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Build links based on routing mode
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,7 +135,7 @@ export function ProductGrid({ config, storeId, storeSlug }: ProductGridProps) {
               return (
                 <Link
                   key={product.id}
-                  to={`/store/${storeSlug}/product/${product.slug}`}
+                  to={buildLink(`/product/${product.slug}`)}
                   className="group"
                 >
                   <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">

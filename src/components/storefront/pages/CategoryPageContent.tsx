@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { ChevronRight, Grid3X3, List, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,6 +42,15 @@ interface CategoryPageContentProps {
 export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentProps) {
   const [searchParams] = useSearchParams();
   const categorySlug = searchParams.get('cat');
+  
+  // Get routing mode from context
+  const storefrontContext = useStorefrontOptional();
+  const isSubdomainMode = storefrontContext?.isSubdomainMode || false;
+  
+  // Build links based on routing mode
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
   
   // Data state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -131,12 +141,12 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link to={`/store/${storeSlug}`} className="hover:text-foreground transition-colors">
+          <Link to={buildLink('/')} className="hover:text-foreground transition-colors">
             Home
           </Link>
           <ChevronRight className="w-4 h-4" />
           <Link 
-            to={`/store/${storeSlug}/page/category`} 
+            to={buildLink('/page/category')} 
             className="hover:text-foreground transition-colors"
           >
             Categories
@@ -207,13 +217,14 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
                 product={product} 
                 storeSlug={storeSlug}
                 viewMode={viewMode}
+                isSubdomainMode={isSubdomainMode}
               />
             ))}
           </div>
         ) : (
           <div className="text-center py-16">
             <p className="text-muted-foreground">No products found in this category.</p>
-            <Link to={`/store/${storeSlug}/page/category`}>
+            <Link to={buildLink('/page/category')}>
               <Button variant="link" className="mt-2">Browse all categories</Button>
             </Link>
           </div>
@@ -229,7 +240,7 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
                 .map((category) => (
                   <Link
                     key={category.id}
-                    to={`/store/${storeSlug}/page/category?cat=${category.slug}`}
+                    to={buildLink(`/page/category?cat=${category.slug}`)}
                   >
                     <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
                       {category.name}
@@ -248,7 +259,7 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link to={`/store/${storeSlug}`} className="hover:text-foreground transition-colors">
+        <Link to={buildLink('/')} className="hover:text-foreground transition-colors">
           Home
         </Link>
         <ChevronRight className="w-4 h-4" />
@@ -264,7 +275,8 @@ export function CategoryPageContent({ storeId, storeSlug }: CategoryPageContentP
               key={category.id} 
               category={category} 
               storeSlug={storeSlug}
-              productCount={0} // Could be enhanced with product count
+              productCount={0}
+              isSubdomainMode={isSubdomainMode}
             />
           ))}
         </div>
@@ -285,11 +297,16 @@ interface CategoryCardProps {
   category: Category;
   storeSlug: string;
   productCount: number;
+  isSubdomainMode: boolean;
 }
 
-function CategoryCard({ category, storeSlug }: CategoryCardProps) {
+function CategoryCard({ category, storeSlug, isSubdomainMode }: CategoryCardProps) {
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
+
   return (
-    <Link to={`/store/${storeSlug}/page/category?cat=${category.slug}`}>
+    <Link to={buildLink(`/page/category?cat=${category.slug}`)}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="aspect-square relative overflow-hidden bg-muted">
           {category.image_url ? (
@@ -333,9 +350,14 @@ interface ProductCardProps {
   product: Product;
   storeSlug: string;
   viewMode: 'grid' | 'list';
+  isSubdomainMode: boolean;
 }
 
-function ProductCard({ product, storeSlug, viewMode }: ProductCardProps) {
+function ProductCard({ product, storeSlug, viewMode, isSubdomainMode }: ProductCardProps) {
+  const buildLink = (path: string): string => {
+    return isSubdomainMode ? path : `/store/${storeSlug}${path}`;
+  };
+
   const images = (product.images as string[]) || [];
   const imageUrl = images[0] || '/placeholder.svg';
 
@@ -346,7 +368,7 @@ function ProductCard({ product, storeSlug, viewMode }: ProductCardProps) {
 
   if (viewMode === 'list') {
     return (
-      <Link to={`/store/${storeSlug}/product/${product.slug}`}>
+      <Link to={buildLink(`/product/${product.slug}`)}>
         <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
           <div className="flex">
             <div className="w-32 h-32 md:w-48 md:h-48 relative overflow-hidden bg-muted flex-shrink-0">
@@ -393,7 +415,7 @@ function ProductCard({ product, storeSlug, viewMode }: ProductCardProps) {
   }
 
   return (
-    <Link to={`/store/${storeSlug}/product/${product.slug}`}>
+    <Link to={buildLink(`/product/${product.slug}`)}>
       <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="aspect-square relative overflow-hidden bg-muted">
           <img
