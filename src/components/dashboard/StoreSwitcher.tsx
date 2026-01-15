@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useStore } from '@/contexts/StoreContext';
+import { BeeLoader } from '@/components/ui/bee-loader';
 
 export default function StoreSwitcher() {
   const navigate = useNavigate();
@@ -26,8 +27,8 @@ export default function StoreSwitcher() {
 
   if (loading) {
     return (
-      <div className="p-4 border-b border-sidebar-border">
-        <div className="h-10 bg-sidebar-accent/50 rounded-lg animate-pulse" />
+      <div className="p-4 border-b border-sidebar-border flex items-center justify-center">
+        <BeeLoader size="sm" />
       </div>
     );
   }
@@ -66,12 +67,21 @@ export default function StoreSwitcher() {
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-popover" align="start">
-          <Command>
-            <CommandInput placeholder="Search stores..." />
-            <CommandList>
-              <CommandEmpty>No store found.</CommandEmpty>
-              <CommandGroup heading="Your Stores">
+        <PopoverContent 
+          className="w-[--radix-popover-trigger-width] p-0 bg-card border border-border shadow-lg z-50" 
+          align="start"
+          sideOffset={4}
+        >
+          <Command className="bg-card">
+            <CommandInput 
+              placeholder="Search stores..." 
+              className="border-b border-border"
+            />
+            <CommandList className="max-h-64">
+              <CommandEmpty className="py-4 text-center text-muted-foreground">
+                No store found.
+              </CommandEmpty>
+              <CommandGroup heading="Your Stores" className="text-muted-foreground">
                 {stores.map((store) => (
                   <CommandItem
                     key={store.id}
@@ -80,7 +90,7 @@ export default function StoreSwitcher() {
                       setCurrentStore(store);
                       setOpen(false);
                     }}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-foreground hover:bg-accent hover:text-accent-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
                   >
                     <div className="w-6 h-6 bg-primary/10 rounded flex items-center justify-center mr-2">
                       <Store className="w-3 h-3 text-primary" />
@@ -95,14 +105,14 @@ export default function StoreSwitcher() {
                   </CommandItem>
                 ))}
               </CommandGroup>
-              <CommandSeparator />
+              <CommandSeparator className="bg-border" />
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
                     navigate('/dashboard/create-store');
                     setOpen(false);
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create New Store
@@ -113,7 +123,7 @@ export default function StoreSwitcher() {
                       navigate('/dashboard/settings');
                       setOpen(false);
                     }}
-                    className="cursor-pointer"
+                    className="cursor-pointer text-foreground hover:bg-accent hover:text-accent-foreground"
                   >
                     <Store className="w-4 h-4 mr-2" />
                     Store Settings

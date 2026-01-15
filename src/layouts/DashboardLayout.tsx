@@ -3,7 +3,7 @@ import { useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import { Loader2 } from 'lucide-react';
+import { BeeLoader } from '@/components/ui/bee-loader';
 
 export default function DashboardLayout() {
   const { user, loading } = useAuth();
@@ -18,7 +18,7 @@ export default function DashboardLayout() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <BeeLoader size="lg" text="Loading your dashboard..." />
       </div>
     );
   }

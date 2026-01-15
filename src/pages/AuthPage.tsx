@@ -4,9 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Store, Mail, Lock, User, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import BeeLogo from '@/components/brand/BeeLogo';
+import { BeeLoader } from '@/components/ui/bee-loader';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -79,7 +81,7 @@ export default function AuthPage() {
           }
         } else {
           toast({
-            title: 'Welcome to PasalHub!',
+            title: 'Welcome to ExtendBee!',
             description: 'Your account has been created successfully.',
           });
           navigate('/dashboard');
@@ -115,9 +117,7 @@ export default function AuthPage() {
         
         <div className="max-w-md w-full">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
-              <Store className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <BeeLogo size="lg" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">
                 {isSignUp ? 'Create Account' : 'Welcome Back'}
@@ -189,7 +189,9 @@ export default function AuthPage() {
               className="w-full"
               disabled={loading}
             >
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {loading ? (
+                <BeeLoader size="sm" className="mr-2" />
+              ) : null}
               {isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
           </form>
@@ -212,14 +214,14 @@ export default function AuthPage() {
       {/* Right Panel - Branding */}
       <div className="hidden lg:flex flex-1 bg-gradient-dark items-center justify-center p-16">
         <div className="max-w-md text-center">
-          <div className="w-24 h-24 bg-gradient-accent rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float shadow-accent-glow">
-            <Store className="w-12 h-12 text-accent-foreground" />
+          <div className="flex items-center justify-center mb-8">
+            <BeeLogo size="xl" className="animate-float" />
           </div>
           <h2 className="text-3xl font-bold text-primary-foreground mb-4">
-            PasalHub Nepal
+            ExtendBee
           </h2>
           <p className="text-lg text-primary-foreground/80">
-            The complete e-commerce platform built for Nepali entrepreneurs. 
+            Your all-in-one e-commerce platform. 
             Create, manage, and grow your online store with ease.
           </p>
           
