@@ -38,7 +38,7 @@ export default function StoreSwitcher() {
       <div className="p-4 border-b border-sidebar-border">
         <Button
           variant="outline"
-          className="w-full justify-start bg-sidebar-accent/50 border-sidebar-border"
+          className="w-full justify-start bg-white/10 border-white/20 text-sidebar-foreground hover:bg-white/20"
           onClick={() => navigate('/dashboard/create-store')}
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -56,15 +56,15 @@ export default function StoreSwitcher() {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent"
+            className="w-full justify-between bg-white/10 border-white/20 text-sidebar-foreground hover:bg-white/20 hover:text-sidebar-foreground"
           >
             <div className="flex items-center gap-2 truncate">
               <div className="w-6 h-6 bg-sidebar-primary rounded flex items-center justify-center flex-shrink-0">
                 <Store className="w-3 h-3 text-sidebar-primary-foreground" />
               </div>
-              <span className="truncate">{currentStore?.name || 'Select store'}</span>
+              <span className="truncate text-sidebar-foreground">{currentStore?.name || 'Select store'}</span>
             </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-sidebar-foreground/50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent 
