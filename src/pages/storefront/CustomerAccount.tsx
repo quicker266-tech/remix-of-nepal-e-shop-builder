@@ -4,6 +4,7 @@
  * ============================================================================
  * 
  * Main account page showing orders, profile, and quick actions.
+ * Uses store-specific customer authentication.
  * 
  * ============================================================================
  */
@@ -15,9 +16,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
-import { supabase } from '@/integrations/supabase/client';
+import { useStoreCustomerAuth } from '@/contexts/StoreCustomerAuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/store-customer-auth`;
 
 interface Order {
   id: string;
@@ -36,69 +39,51 @@ export default function CustomerAccount() {
   const store = storefrontContext?.store;
   const links = useStoreLinksWithFallback(storeSlug || '');
   
+  const { customer, isAuthenticated, loading: authLoading, logout } = useStoreCustomerAuth();
+  
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [profile, setProfile] = useState<{ full_name?: string } | null>(null);
 
   useEffect(() => {
-    checkAuthAndFetchData();
-  }, [store?.id]);
+    if (!authLoading && !isAuthenticated) {
+      navigate(links.auth() + '?returnTo=account');
+      return;
+    }
+    
+    if (isAuthenticated && store?.id) {
+      fetchOrders();
+    }
+  }, [authLoading, isAuthenticated, store?.id]);
 
-  const checkAuthAndFetchData = async () => {
+  const fetchOrders = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate(links.auth() + '?returnTo=account');
+      const token = localStorage.getItem(`store_customer_token_${store?.id}`);
+      if (!token || !store?.id) {
+        setLoading(false);
         return;
       }
-      
-      setUser(user);
-      
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      setProfile(profileData);
-      
-      // Fetch recent orders for this store using a proper two-step query
-      if (store?.id) {
-        // Step 1: Get customer ID for this store and user
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('store_id', store.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        // Step 2: Fetch orders only if customer exists
-        if (customer?.id) {
-          const { data: ordersData } = await supabase
-            .from('orders')
-            .select('id, order_number, status, total, created_at')
-            .eq('store_id', store.id)
-            .eq('customer_id', customer.id)
-            .order('created_at', { ascending: false })
-            .limit(5);
-          
-          setRecentOrders(ordersData || []);
-        } else {
-          setRecentOrders([]);
-        }
+
+      const response = await fetch(`${EDGE_FUNCTION_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store_id: store.id, token }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Get only the first 5 orders
+        setRecentOrders((data.orders || []).slice(0, 5));
       }
     } catch (error) {
-      console.error('Error fetching account data:', error);
+      console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     toast.success('Logged out successfully');
     navigate(links.home());
   };
@@ -115,7 +100,7 @@ export default function CustomerAccount() {
     return colors[status] || 'bg-muted text-muted-foreground';
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -150,7 +135,7 @@ export default function CustomerAccount() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Welcome, {profile?.full_name || user?.email?.split('@')[0] || 'Customer'}!
+              Welcome, {customer?.full_name || customer?.email?.split('@')[0] || 'Customer'}!
             </CardTitle>
             <CardDescription>
               Manage your orders and account settings

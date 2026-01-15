@@ -4,6 +4,7 @@
  * ============================================================================
  * 
  * Shows complete order history for the customer at this store.
+ * Uses store-specific customer authentication.
  * 
  * ============================================================================
  */
@@ -16,8 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
-import { supabase } from '@/integrations/supabase/client';
+import { useStoreCustomerAuth } from '@/contexts/StoreCustomerAuthContext';
 import { format } from 'date-fns';
+
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/store-customer-auth`;
 
 interface OrderItem {
   id: string;
@@ -36,7 +39,7 @@ interface Order {
   shipping_amount: number;
   total: number;
   created_at: string;
-  order_items: OrderItem[];
+  items: OrderItem[];
 }
 
 export default function CustomerOrders() {
@@ -48,64 +51,42 @@ export default function CustomerOrders() {
   const store = storefrontContext?.store;
   const links = useStoreLinksWithFallback(storeSlug || '');
   
+  const { isAuthenticated, loading: authLoading } = useStoreCustomerAuth();
+  
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOrders();
-  }, [store?.id]);
+    if (!authLoading && !isAuthenticated) {
+      navigate(links.auth() + '?returnTo=account');
+      return;
+    }
+    
+    if (isAuthenticated && store?.id) {
+      fetchOrders();
+    }
+  }, [authLoading, isAuthenticated, store?.id]);
 
   const fetchOrders = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate(links.auth() + '?returnTo=account');
-        return;
-      }
-      
-      if (!store?.id) return;
-      
-      // Get customer ID for this store
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('store_id', store.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (!customer) {
-        setOrders([]);
+      const token = localStorage.getItem(`store_customer_token_${store?.id}`);
+      if (!token || !store?.id) {
         setLoading(false);
         return;
       }
-      
-      // Fetch orders with items
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select(`
-          id, 
-          order_number, 
-          status, 
-          subtotal, 
-          shipping_amount, 
-          total, 
-          created_at,
-          order_items (
-            id,
-            product_name,
-            variant_name,
-            quantity,
-            unit_price,
-            total_price
-          )
-        `)
-        .eq('store_id', store.id)
-        .eq('customer_id', customer.id)
-        .order('created_at', { ascending: false });
-      
-      setOrders(ordersData || []);
+
+      const response = await fetch(`${EDGE_FUNCTION_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store_id: store.id, token }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setOrders(data.orders || []);
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -125,7 +106,7 @@ export default function CustomerOrders() {
     return colors[status] || 'bg-muted text-muted-foreground';
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -200,7 +181,7 @@ export default function CustomerOrders() {
                   <CollapsibleContent>
                     <CardContent className="pt-0">
                       <div className="border-t pt-4 space-y-3">
-                        {order.order_items.map(item => (
+                        {(order.items || []).map(item => (
                           <div key={item.id} className="flex justify-between text-sm">
                             <div>
                               <span className="font-medium">{item.product_name}</span>

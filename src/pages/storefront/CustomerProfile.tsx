@@ -4,6 +4,7 @@
  * ============================================================================
  * 
  * Allows customers to view and edit their profile information.
+ * Uses store-specific customer authentication.
  * 
  * ============================================================================
  */
@@ -17,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useStorefrontOptional } from '@/contexts/StorefrontContext';
 import { useStoreLinksWithFallback } from '@/hooks/useStoreLinks';
-import { supabase } from '@/integrations/supabase/client';
+import { useStoreCustomerAuth } from '@/contexts/StoreCustomerAuthContext';
 import { toast } from 'sonner';
 
 interface CustomerProfile {
@@ -34,10 +35,10 @@ export default function CustomerProfile() {
   const navigate = useNavigate();
   
   const storeSlug = storefrontContext?.storeSlug || urlStoreSlug;
-  const store = storefrontContext?.store;
   const links = useStoreLinksWithFallback(storeSlug || '');
   
-  const [loading, setLoading] = useState(true);
+  const { customer, isAuthenticated, loading: authLoading, updateProfile, refreshCustomer } = useStoreCustomerAuth();
+  
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<CustomerProfile>({
     full_name: '',
@@ -47,90 +48,44 @@ export default function CustomerProfile() {
     city: '',
   });
 
+  // Redirect if not authenticated
   useEffect(() => {
-    fetchProfile();
-  }, [store?.id]);
-
-  const fetchProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate(links.auth() + '?returnTo=account');
-        return;
-      }
-      
-      // Get base profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name, phone')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      // Get customer data for this store
-      let customerData = null;
-      if (store?.id) {
-        const { data } = await supabase
-          .from('customers')
-          .select('full_name, phone, address, city')
-          .eq('store_id', store.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        customerData = data;
-      }
-      
-      setProfile({
-        full_name: customerData?.full_name || profileData?.full_name || '',
-        email: user.email || '',
-        phone: customerData?.phone || profileData?.phone || '',
-        address: customerData?.address || '',
-        city: customerData?.city || '',
-      });
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
+    if (!authLoading && !isAuthenticated) {
+      navigate(links.auth() + '?returnTo=account');
     }
-  };
+  }, [authLoading, isAuthenticated]);
+
+  // Populate profile from customer data
+  useEffect(() => {
+    if (customer) {
+      setProfile({
+        full_name: customer.full_name || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        address: customer.address || '',
+        city: customer.city || '',
+      });
+    }
+  }, [customer]);
 
   const handleSave = async () => {
     setSaving(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { success, error } = await updateProfile({
+        full_name: profile.full_name,
+        phone: profile.phone,
+        address: profile.address,
+        city: profile.city,
+      });
       
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({
-          full_name: profile.full_name,
-          phone: profile.phone,
-        })
-        .eq('user_id', user.id);
-      
-      // Update customer data for this store
-      if (store?.id) {
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('store_id', store.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (customer) {
-          await supabase
-            .from('customers')
-            .update({
-              full_name: profile.full_name,
-              phone: profile.phone,
-              address: profile.address,
-              city: profile.city,
-            })
-            .eq('id', customer.id);
-        }
+      if (!success) {
+        toast.error(error || 'Failed to update profile');
+        return;
       }
       
+      // Refresh customer data
+      await refreshCustomer();
       toast.success('Profile updated successfully');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -140,7 +95,7 @@ export default function CustomerProfile() {
     }
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

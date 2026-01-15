@@ -741,6 +741,120 @@ export type Database = {
         }
         Relationships: []
       }
+      store_customer_accounts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email: string
+          id: string
+          password_hash: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          email: string
+          id?: string
+          password_hash: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          email?: string
+          id?: string
+          password_hash?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_customer_accounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customer_accounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customer_accounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_customer_sessions: {
+        Row: {
+          account_id: string
+          created_at: string
+          customer_id: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          store_id: string
+          token_hash: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          customer_id: string
+          expires_at: string
+          id?: string
+          last_used_at?: string
+          store_id: string
+          token_hash: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          customer_id?: string
+          expires_at?: string
+          id?: string
+          last_used_at?: string
+          store_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_customer_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "store_customer_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customer_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customer_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_customer_sessions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_customers: {
         Row: {
           created_at: string
@@ -1307,6 +1421,10 @@ export type Database = {
         Args: { _store_id: string; _user_id: string }
         Returns: boolean
       }
+      cleanup_expired_store_customer_sessions: {
+        Args: never
+        Returns: undefined
+      }
       create_or_update_checkout_customer: {
         Args: {
           p_address: string
@@ -1365,6 +1483,48 @@ export type Database = {
           p_shipping_amount?: number
           p_store_id: string
         }
+        Returns: Json
+      }
+      store_customer_get_orders: {
+        Args: { p_store_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      store_customer_login: {
+        Args: {
+          p_email: string
+          p_password_hash: string
+          p_store_id: string
+          p_token_hash: string
+        }
+        Returns: Json
+      }
+      store_customer_logout: {
+        Args: { p_store_id: string; p_token_hash: string }
+        Returns: Json
+      }
+      store_customer_register: {
+        Args: {
+          p_email: string
+          p_full_name?: string
+          p_password_hash: string
+          p_phone?: string
+          p_store_id: string
+        }
+        Returns: Json
+      }
+      store_customer_update_profile: {
+        Args: {
+          p_address?: string
+          p_city?: string
+          p_full_name?: string
+          p_phone?: string
+          p_store_id: string
+          p_token_hash: string
+        }
+        Returns: Json
+      }
+      store_customer_validate_session: {
+        Args: { p_store_id: string; p_token_hash: string }
         Returns: Json
       }
     }
