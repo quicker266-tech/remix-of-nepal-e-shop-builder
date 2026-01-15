@@ -41,7 +41,20 @@
  * ============================================================================
  */
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+
+/**
+ * Storage key prefix for store-specific carts
+ * Each store gets its own cart in localStorage
+ */
+const CART_STORAGE_KEY_PREFIX = 'cart_';
+
+/**
+ * Get the storage key for a specific store
+ */
+function getCartStorageKey(storeSlug: string | undefined): string {
+  return storeSlug ? `${CART_STORAGE_KEY_PREFIX}${storeSlug}` : 'cart_global';
+}
 
 /**
  * Cart item data structure
@@ -89,24 +102,47 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 /**
+ * Cart Provider Props
+ * @property storeSlug - Optional store slug for store-specific cart isolation
+ */
+interface CartProviderProps {
+  children: ReactNode;
+  storeSlug?: string;
+}
+
+/**
  * Cart Provider Component
  * Wraps the storefront and provides cart state
+ * 
+ * IMPORTANT: Cart is now isolated per store using storeSlug
+ * Each store has its own localStorage key: cart_{storeSlug}
  */
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children, storeSlug }: CartProviderProps) {
+  // Memoize storage key to prevent unnecessary recalculations
+  const storageKey = useMemo(() => getCartStorageKey(storeSlug), [storeSlug]);
+  
   // Initialize cart from localStorage (if available)
   const [items, setItems] = useState<CartItem[]>(() => {
     // SSR safety check
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cart');
+      const saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : [];
     }
     return [];
   });
 
+  // Re-initialize cart when storeSlug changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      setItems(saved ? JSON.parse(saved) : []);
+    }
+  }, [storageKey]);
+
   // Sync cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem(storageKey, JSON.stringify(items));
+  }, [items, storageKey]);
 
   /**
    * Add an item to the cart
